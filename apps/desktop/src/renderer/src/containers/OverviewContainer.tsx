@@ -79,7 +79,7 @@ const refreshOverview = (): Promise<void> => {
         overviewStore.updateSnapshot((current) => ({
           ...current,
           loading: false,
-          error: reason instanceof Error ? reason.message : String(reason),
+          error: String(reason),
         }))
       }
     )

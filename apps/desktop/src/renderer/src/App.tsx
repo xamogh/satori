@@ -36,14 +36,14 @@ function App(): React.JSX.Element {
 
     setIssues([])
     signIn(decoded.right).catch((reason) =>
-      setError(reason instanceof Error ? reason.message : String(reason))
+      setError(String(reason))
     )
   }, [email, password, signIn])
 
   const handleSignOut = useCallback((): void => {
     setError("")
     signOut().catch((reason) =>
-      setError(reason instanceof Error ? reason.message : String(reason))
+      setError(String(reason))
     )
   }, [signOut])
 

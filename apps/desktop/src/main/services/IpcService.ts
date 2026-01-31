@@ -1,6 +1,6 @@
 import { ipcMain } from "electron"
 import { Cause, Effect, Exit, Option, ParseResult, Schema } from "effect"
-import { IpcError, LockedError, UnauthorizedError } from "../errors"
+import { IpcError } from "../errors"
 import {
   IpcRoutes,
   makeErr,
@@ -16,7 +16,7 @@ const registerHandler = <
   RequestEncoded,
   Response,
   ResponseEncoded,
-  HandlerError extends Error,
+  HandlerError extends { readonly _tag: string; readonly message: string } & Error,
 >(
   route: {
     readonly channel: string
@@ -62,24 +62,23 @@ const registerHandler = <
             if (Exit.isFailure(responseExit)) {
               const failure = Cause.failureOption(responseExit.cause)
               if (Option.isSome(failure)) {
-                if (failure.value instanceof UnauthorizedError) {
-                  return makeErr({
-                    _tag: "Unauthorized",
-                    message: failure.value.message,
-                  })
+                switch (failure.value._tag) {
+                  case "UnauthorizedError":
+                    return makeErr({
+                      _tag: "Unauthorized",
+                      message: failure.value.message,
+                    })
+                  case "LockedError":
+                    return makeErr({
+                      _tag: "Locked",
+                      message: failure.value.message,
+                    })
+                  default:
+                    return makeErr({
+                      _tag: "HandlerError",
+                      message: failure.value.message,
+                    })
                 }
-
-                if (failure.value instanceof LockedError) {
-                  return makeErr({
-                    _tag: "Locked",
-                    message: failure.value.message,
-                  })
-                }
-
-                return makeErr({
-                  _tag: "HandlerError",
-                  message: failure.value.message,
-                })
               }
 
               return makeErr({

@@ -73,7 +73,7 @@ const refreshPeopleList = (query: string | undefined): Promise<void> => {
       peopleListStore.updateSnapshot((current) => ({
         ...current,
         loading: false,
-        error: reason instanceof Error ? reason.message : String(reason),
+        error: String(reason),
       }))
     }
   )
@@ -158,7 +158,7 @@ export const PeopleContainer = (): React.JSX.Element => {
 
         setCreateError(result.error.message)
       },
-      (reason) => setCreateError(reason instanceof Error ? reason.message : String(reason))
+      (reason) => setCreateError(String(reason))
     )
   }, [createDisplayName, createEmail, createPhone, refresh])
 
@@ -179,7 +179,7 @@ export const PeopleContainer = (): React.JSX.Element => {
         (reason) =>
           peopleListStore.updateSnapshot((current) => ({
             ...current,
-            error: reason instanceof Error ? reason.message : String(reason),
+            error: String(reason),
           }))
       )
     },
@@ -214,7 +214,7 @@ export const PeopleContainer = (): React.JSX.Element => {
           return url
         })
       },
-      (reason) => setPhotoError(reason instanceof Error ? reason.message : String(reason))
+      (reason) => setPhotoError(String(reason))
     )
   }, [])
 
@@ -245,7 +245,7 @@ export const PeopleContainer = (): React.JSX.Element => {
           (reason) =>
             peopleListStore.updateSnapshot((current) => ({
               ...current,
-              error: reason instanceof Error ? reason.message : String(reason),
+              error: String(reason),
             }))
         )
     },

@@ -6,124 +6,67 @@ import {
   type AuthState,
   type IpcRequest,
   type IpcResponse,
+  type IpcResult,
 } from "@satori/ipc-contract/ipc/contract"
 
 const makeIpcClientService = Effect.sync(() => {
-  const authStatus: Effect.Effect<AuthState, IpcCommunicationError | IpcRemoteError> = Effect.tryPromise({
-    try: async () => {
-      const result = await window.api.authStatus()
-      if (result._tag === "Ok") {
-        return result.value
-      }
+  const handleResult = <A>(
+    route: keyof typeof IpcRoutes,
+    result: IpcResult<A>
+  ): Effect.Effect<A, IpcRemoteError> =>
+    result._tag === "Ok"
+      ? Effect.succeed(result.value)
+      : Effect.fail(
+          new IpcRemoteError({
+            message: `IPC route ${route} failed: ${result.error.message}`,
+            error: result.error,
+          })
+        )
 
-      throw new IpcRemoteError({
-        message: result.error.message,
-        error: result.error,
-      })
-    },
-    catch: (error) =>
-      error instanceof IpcRemoteError
-        ? error
-        : new IpcCommunicationError({
-            message: "Failed to invoke IPC route: authStatus",
-            channel: IpcRoutes.authStatus.channel,
-            cause: error,
-          }),
-  })
+  const invokeVoid = <K extends keyof typeof IpcRoutes>(
+    route: K,
+    call: () => Promise<IpcResult<IpcResponse<K>>>
+  ): Effect.Effect<IpcResponse<K>, IpcCommunicationError | IpcRemoteError> =>
+    Effect.tryPromise({
+      try: call,
+      catch: (cause) =>
+        new IpcCommunicationError({
+          message: `Failed to invoke IPC route: ${route}`,
+          channel: IpcRoutes[route].channel,
+          cause,
+        }),
+    }).pipe(Effect.flatMap((result) => handleResult(route, result)))
+
+  const invokePayload = <K extends keyof typeof IpcRoutes>(
+    route: K,
+    payload: IpcRequest<K>,
+    call: (payload: IpcRequest<K>) => Promise<IpcResult<IpcResponse<K>>>
+  ): Effect.Effect<IpcResponse<K>, IpcCommunicationError | IpcRemoteError> =>
+    Effect.tryPromise({
+      try: () => call(payload),
+      catch: (cause) =>
+        new IpcCommunicationError({
+          message: `Failed to invoke IPC route: ${route}`,
+          channel: IpcRoutes[route].channel,
+          cause,
+        }),
+    }).pipe(Effect.flatMap((result) => handleResult(route, result)))
+
+  const authStatus = invokeVoid("authStatus", () => window.api.authStatus())
 
   const authSignIn = (
     payload: AuthSignInRequest
   ): Effect.Effect<AuthState, IpcCommunicationError | IpcRemoteError> =>
-    Effect.tryPromise({
-      try: async () => {
-        const result = await window.api.authSignIn(payload)
-        if (result._tag === "Ok") {
-          return result.value
-        }
+    invokePayload("authSignIn", payload, (input) => window.api.authSignIn(input))
 
-        throw new IpcRemoteError({
-          message: result.error.message,
-          error: result.error,
-        })
-      },
-      catch: (error) =>
-        error instanceof IpcRemoteError
-          ? error
-          : new IpcCommunicationError({
-              message: "Failed to invoke IPC route: authSignIn",
-              channel: IpcRoutes.authSignIn.channel,
-              cause: error,
-            }),
-    })
+  const authSignOut = invokeVoid("authSignOut", () => window.api.authSignOut())
 
-  const authSignOut: Effect.Effect<AuthState, IpcCommunicationError | IpcRemoteError> = Effect.tryPromise({
-    try: async () => {
-      const result = await window.api.authSignOut()
-      if (result._tag === "Ok") {
-        return result.value
-      }
-
-      throw new IpcRemoteError({
-        message: result.error.message,
-        error: result.error,
-      })
-    },
-    catch: (error) =>
-      error instanceof IpcRemoteError
-        ? error
-        : new IpcCommunicationError({
-            message: "Failed to invoke IPC route: authSignOut",
-            channel: IpcRoutes.authSignOut.channel,
-            cause: error,
-          }),
-  })
-
-  const ping: Effect.Effect<IpcResponse<"ping">, IpcCommunicationError | IpcRemoteError> = Effect.tryPromise({
-    try: async () => {
-      const result = await window.api.ping()
-      if (result._tag === "Ok") {
-        return result.value
-      }
-
-      throw new IpcRemoteError({
-        message: result.error.message,
-        error: result.error,
-      })
-    },
-    catch: (error) =>
-      error instanceof IpcRemoteError
-        ? error
-        : new IpcCommunicationError({
-            message: "Failed to invoke IPC route: ping",
-            channel: IpcRoutes.ping.channel,
-            cause: error,
-          }),
-  })
+  const ping = invokeVoid("ping", () => window.api.ping())
 
   const echo = (
     payload: IpcRequest<"echo">
   ): Effect.Effect<IpcResponse<"echo">, IpcCommunicationError | IpcRemoteError> =>
-    Effect.tryPromise({
-      try: async () => {
-        const result = await window.api.echo(payload)
-        if (result._tag === "Ok") {
-          return result.value
-        }
-
-        throw new IpcRemoteError({
-          message: result.error.message,
-          error: result.error,
-        })
-      },
-      catch: (error) =>
-        error instanceof IpcRemoteError
-          ? error
-          : new IpcCommunicationError({
-              message: "Failed to invoke IPC route: echo",
-              channel: IpcRoutes.echo.channel,
-              cause: error,
-            }),
-    })
+    invokePayload("echo", payload, (input) => window.api.echo(input))
 
   return { authStatus, authSignIn, authSignOut, ping, echo } as const
 })

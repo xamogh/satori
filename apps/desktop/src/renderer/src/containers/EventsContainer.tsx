@@ -75,7 +75,7 @@ const refreshEventsList = (query: string | undefined): Promise<void> => {
       eventsListStore.updateSnapshot((current) => ({
         ...current,
         loading: false,
-        error: reason instanceof Error ? reason.message : String(reason),
+        error: String(reason),
       }))
     }
   )
@@ -162,7 +162,7 @@ export const EventsContainer = (): React.JSX.Element => {
 
         setCreateError(result.error.message)
       },
-      (reason) => setCreateError(reason instanceof Error ? reason.message : String(reason))
+      (reason) => setCreateError(String(reason))
     )
   }, [createDescription, createEndsAt, createStartsAt, createTitle, refresh])
 
@@ -182,7 +182,7 @@ export const EventsContainer = (): React.JSX.Element => {
         (reason) =>
           eventsListStore.updateSnapshot((current) => ({
             ...current,
-            error: reason instanceof Error ? reason.message : String(reason),
+            error: String(reason),
           }))
       )
     },

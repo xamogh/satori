@@ -4,6 +4,22 @@ import { Cause, Effect, Exit, Option, ParseResult, Schema } from 'effect'
 import { IpcResultSchema, IpcRoutes, makeErr, type IpcApi, type IpcResult } from '@satori/ipc-contract/ipc/contract'
 import { formatParseIssues } from '@satori/ipc-contract/utils/parseIssue'
 
+class IpcInvokeError extends Schema.TaggedError<IpcInvokeError>('IpcInvokeError')(
+  'IpcInvokeError',
+  {
+    message: Schema.String,
+    channel: Schema.String,
+    cause: Schema.Unknown,
+  }
+) {}
+
+class ContextBridgeExposeError extends Schema.TaggedError<ContextBridgeExposeError>(
+  'ContextBridgeExposeError'
+)('ContextBridgeExposeError', {
+  message: Schema.String,
+  cause: Schema.Unknown,
+}) {}
+
 const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
   route: {
     readonly channel: string
@@ -26,7 +42,12 @@ const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
   const rawResultExit = await Effect.runPromiseExit(
     Effect.tryPromise({
       try: () => ipcRenderer.invoke(route.channel, encodedPayloadExit.value),
-      catch: (cause) => cause,
+      catch: (cause) =>
+        new IpcInvokeError({
+          message: 'Failed to invoke IPC route',
+          channel: route.channel,
+          cause,
+        }),
     })
   )
 
@@ -34,7 +55,7 @@ const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
     const failure = Cause.failureOption(rawResultExit.cause)
     const message = Option.match(failure, {
       onNone: () => Cause.pretty(rawResultExit.cause),
-      onSome: (cause) => (cause instanceof Error ? cause.message : String(cause)),
+      onSome: (error) => error.message,
     })
 
     return makeErr({
@@ -105,7 +126,11 @@ if (process.contextIsolated) {
         contextBridge.exposeInMainWorld('electron', electronAPI)
         contextBridge.exposeInMainWorld('api', api)
       },
-      catch: (cause) => cause,
+      catch: (cause) =>
+        new ContextBridgeExposeError({
+          message: 'Failed to expose preload APIs',
+          cause,
+        }),
     })
   )
 

@@ -80,7 +80,7 @@ export const PeopleView = (): React.JSX.Element => {
 
           setError(result.error.message)
         },
-        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
+        (reason) => setError(String(reason))
       )
       .finally(() => setLoading(false))
   }, [normalizedQuery])
@@ -120,7 +120,7 @@ export const PeopleView = (): React.JSX.Element => {
 
         setCreateError(result.error.message)
       },
-      (reason) => setCreateError(reason instanceof Error ? reason.message : String(reason))
+      (reason) => setCreateError(String(reason))
     )
   }, [createDisplayName, createEmail, createPhone, refresh])
 
@@ -135,7 +135,7 @@ export const PeopleView = (): React.JSX.Element => {
           }
           setError(result.error.message)
         },
-        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
+        (reason) => setError(String(reason))
       )
     },
     [refresh]
@@ -164,7 +164,7 @@ export const PeopleView = (): React.JSX.Element => {
             return url
           })
         },
-        (reason) => setPhotoError(reason instanceof Error ? reason.message : String(reason))
+        (reason) => setPhotoError(String(reason))
       )
     },
     []
@@ -304,7 +304,7 @@ export const PeopleView = (): React.JSX.Element => {
                           event.currentTarget.value = ""
                           if (!file) return
                           uploadPhotoForPerson(person.id, file).catch((reason) =>
-                            setError(reason instanceof Error ? reason.message : String(reason))
+                            setError(String(reason))
                           )
                         }}
                       />

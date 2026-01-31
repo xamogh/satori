@@ -24,7 +24,7 @@ export const SyncView = (): React.JSX.Element => {
           }
           setError(result.error.message)
         },
-        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
+        (reason) => setError(String(reason))
       )
       .finally(() => setLoading(false))
   }, [])
@@ -49,7 +49,7 @@ export const SyncView = (): React.JSX.Element => {
           }
           setError(result.error.message)
         },
-        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
+        (reason) => setError(String(reason))
       )
       .finally(() => setLoading(false))
   }, [])

@@ -41,7 +41,7 @@ export const AppContainer = (): React.JSX.Element => {
 
         setError(result.error.message)
       },
-      (reason) => setError(reason instanceof Error ? reason.message : String(reason))
+      (reason) => setError(String(reason))
     )
   }, [email, password])
 
@@ -52,7 +52,7 @@ export const AppContainer = (): React.JSX.Element => {
         if (result._tag === "Ok") return
         setError(result.error.message)
       },
-      (reason) => setError(reason instanceof Error ? reason.message : String(reason))
+      (reason) => setError(String(reason))
     )
   }, [])
 

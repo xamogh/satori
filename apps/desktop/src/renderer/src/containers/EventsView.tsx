@@ -69,7 +69,7 @@ export const EventsView = (): React.JSX.Element => {
 
           setError(result.error.message)
         },
-        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
+        (reason) => setError(String(reason))
       )
       .finally(() => setLoading(false))
   }, [normalizedQuery])
@@ -125,7 +125,7 @@ export const EventsView = (): React.JSX.Element => {
 
         setCreateError(result.error.message)
       },
-      (reason) => setCreateError(reason instanceof Error ? reason.message : String(reason))
+      (reason) => setCreateError(String(reason))
     )
   }, [createDescription, createEndsAt, createStartsAt, createTitle, refresh])
 
@@ -140,7 +140,7 @@ export const EventsView = (): React.JSX.Element => {
           }
           setError(result.error.message)
         },
-        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
+        (reason) => setError(String(reason))
       )
     },
     [refresh]
