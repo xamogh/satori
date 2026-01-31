@@ -1,7 +1,14 @@
 import { app, safeStorage } from "electron"
 import { join } from "node:path"
-import { FileSystem, HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform"
-import { Context, Effect, Either, Layer, Option, Schema } from "effect"
+import {
+  FetchHttpClient,
+  FileSystem,
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse,
+} from "@effect/platform"
+import { NodeFileSystem } from "@effect/platform-node"
+import { Effect, Either, Option, Schema } from "effect"
 import { AuthSessionSchema, type AuthSession } from "@satori/api-contract/api/auth/auth-model"
 import { BadRequest, InternalServerError, Unauthorized } from "@satori/api-contract/api/http-errors"
 import {
@@ -251,28 +258,6 @@ const authSignInRequest = (
     })
   })
 
-export class AuthService extends Context.Tag("AuthService")<
-  AuthService,
-  {
-    readonly getStatus: Effect.Effect<AuthState, AuthStorageError>
-    readonly signIn: (
-      request: AuthSignInRequest
-    ) => Effect.Effect<
-      AuthState,
-      ApiConfigError | ApiAuthError | AuthStorageError
-    >
-    readonly signOut: Effect.Effect<AuthState, AuthStorageError>
-    readonly requireAuthenticated: Effect.Effect<
-      Extract<AuthState, { _tag: "Authenticated" }>,
-      UnauthorizedError | LockedError | AuthStorageError
-    >
-    readonly getAccessToken: Effect.Effect<
-      string,
-      UnauthorizedError | LockedError | AuthStorageError
-    >
-  }
->() {}
-
 const makeAuthService = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const client = yield* HttpClient.HttpClient
@@ -414,7 +399,10 @@ const makeAuthService = Effect.gen(function* () {
     signOut,
     requireAuthenticated,
     getAccessToken,
-  }
+  } as const
 })
 
-export const AuthServiceLive = Layer.effect(AuthService, makeAuthService)
+export class AuthService extends Effect.Service<AuthService>()("services/AuthService", {
+  dependencies: [NodeFileSystem.layer, FetchHttpClient.layer],
+  effect: makeAuthService,
+}) {}

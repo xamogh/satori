@@ -1,24 +1,13 @@
 import { BrowserWindow, shell } from "electron"
 import { join } from "path"
 import { is } from "@electron-toolkit/utils"
-import { Effect, Context, Layer, Option } from "effect"
+import { Effect, Option } from "effect"
 import icon from "../../../resources/icon.png?asset"
 import {
   DEFAULT_WINDOW_WIDTH,
   DEFAULT_WINDOW_HEIGHT,
 } from "../constants/window"
-import { WindowCreationError, FileLoadError } from "../errors"
-
-export class WindowService extends Context.Tag("WindowService")<
-  WindowService,
-  {
-    readonly createMainWindow: Effect.Effect<
-      BrowserWindow,
-      WindowCreationError | FileLoadError
-    >
-    readonly getMainWindow: Effect.Effect<Option.Option<BrowserWindow>, never>
-  }
->() {}
+import { FileLoadError } from "../errors"
 
 const makeWindowService = Effect.sync(() => {
   let mainWindow: BrowserWindow | null = null
@@ -53,7 +42,7 @@ const makeWindowService = Effect.sync(() => {
     }),
 
     getMainWindow: Effect.sync(() => Option.fromNullable(mainWindow)),
-  }
+  } as const
 })
 
 const loadWindowContent = (
@@ -84,4 +73,7 @@ const loadWindowContent = (
     }
   })
 
-export const WindowServiceLive = Layer.effect(WindowService, makeWindowService)
+export class WindowService extends Effect.Service<WindowService>()("services/WindowService", {
+  dependencies: [],
+  effect: makeWindowService,
+}) {}

@@ -1,5 +1,5 @@
 import { ipcMain } from "electron"
-import { Cause, Effect, Exit, Context, Layer, Option, ParseResult, Schema } from "effect"
+import { Cause, Effect, Exit, Option, ParseResult, Schema } from "effect"
 import { IpcError, LockedError, UnauthorizedError } from "../errors"
 import {
   IpcRoutes,
@@ -10,14 +10,6 @@ import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
 import { AuthService } from "./AuthService"
 import { DataService } from "./DataService"
 import { SyncService } from "./SyncService"
-
-export class IpcService extends Context.Tag("IpcService")<
-  IpcService,
-  {
-    readonly registerHandlers: Effect.Effect<void, IpcError>
-    readonly removeHandlers: Effect.Effect<void, never>
-  }
->() {}
 
 const registerHandler = <
   Request,
@@ -260,7 +252,10 @@ const makeIpcService = Effect.gen(function* () {
         ipcMain.removeHandler(route.channel)
       }
     }),
-  }
+  } as const
 })
 
-export const IpcServiceLive = Layer.effect(IpcService, makeIpcService)
+export class IpcService extends Effect.Service<IpcService>()("services/IpcService", {
+  dependencies: [AuthService.Default, DataService.Default, SyncService.Default],
+  effect: makeIpcService,
+}) {}

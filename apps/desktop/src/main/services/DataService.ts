@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { Context, Effect, Layer, Option, Schema } from "effect"
+import { Effect, Option, Schema } from "effect"
 import { LocalDbService } from "./LocalDbService"
 import { EntityNotFoundError, OutboxEncodeError } from "../errors"
 import type { LocalDbQueryError } from "../errors"
@@ -61,79 +61,6 @@ const encodeSyncOperationJson = (
         })
     )
   )
-
-export class DataService extends Context.Tag("DataService")<
-  DataService,
-  {
-    readonly eventsList: (
-      query: EventListQuery
-    ) => Effect.Effect<ReadonlyArray<Event>, LocalDbQueryError>
-    readonly eventsCreate: (
-      input: EventCreateInput
-    ) => Effect.Effect<Event, LocalDbQueryError | OutboxEncodeError>
-    readonly eventsUpdate: (
-      input: EventUpdateInput
-    ) => Effect.Effect<Event, LocalDbQueryError | OutboxEncodeError>
-    readonly eventsDelete: (
-      input: EventDeleteInput
-    ) => Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError>
-
-    readonly personsList: (
-      query: PersonListQuery
-    ) => Effect.Effect<ReadonlyArray<Person>, LocalDbQueryError>
-    readonly personsCreate: (
-      input: PersonCreateInput
-    ) => Effect.Effect<Person, LocalDbQueryError | OutboxEncodeError>
-    readonly personsUpdate: (
-      input: PersonUpdateInput
-    ) => Effect.Effect<
-      Person,
-      LocalDbQueryError | EntityNotFoundError | OutboxEncodeError
-    >
-    readonly personsDelete: (
-      input: PersonDeleteInput
-    ) => Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError>
-
-    readonly registrationsList: (
-      query: RegistrationListQuery
-    ) => Effect.Effect<ReadonlyArray<Registration>, LocalDbQueryError>
-    readonly registrationsCreate: (
-      input: RegistrationCreateInput
-    ) => Effect.Effect<Registration, LocalDbQueryError | OutboxEncodeError>
-    readonly registrationsUpdate: (
-      input: RegistrationUpdateInput
-    ) => Effect.Effect<Registration, LocalDbQueryError | OutboxEncodeError>
-    readonly registrationsDelete: (
-      input: RegistrationDeleteInput
-    ) => Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError>
-
-    readonly attendanceList: (
-      query: AttendanceListQuery
-    ) => Effect.Effect<ReadonlyArray<Attendance>, LocalDbQueryError>
-    readonly attendanceCreate: (
-      input: AttendanceCreateInput
-    ) => Effect.Effect<Attendance, LocalDbQueryError | OutboxEncodeError>
-    readonly attendanceUpdate: (
-      input: AttendanceUpdateInput
-    ) => Effect.Effect<Attendance, LocalDbQueryError | OutboxEncodeError>
-    readonly attendanceDelete: (
-      input: AttendanceDeleteInput
-    ) => Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError>
-
-    readonly photosCreate: (
-      input: PhotoCreateInput
-    ) => Effect.Effect<
-      Photo,
-      LocalDbQueryError | EntityNotFoundError | OutboxEncodeError
-    >
-    readonly photosDelete: (
-      input: PhotoDeleteInput
-    ) => Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError>
-    readonly photosGet: (
-      id: string
-    ) => Effect.Effect<Photo, LocalDbQueryError | EntityNotFoundError>
-  }
->() {}
 
 const makeDataService = Effect.gen(function* () {
   const db = yield* LocalDbService
@@ -1063,7 +990,10 @@ where id = ?
     photosCreate,
     photosDelete,
     photosGet,
-  }
+  } as const
 })
 
-export const DataServiceLive = Layer.effect(DataService, makeDataService)
+export class DataService extends Effect.Service<DataService>()("services/DataService", {
+  dependencies: [LocalDbService.Default],
+  effect: makeDataService,
+}) {}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { Effect } from "effect"
-import { IpcClientService, IpcClientServiceLive } from "../services/IpcClientService"
+import { IpcClientService } from "../services/IpcClientService"
 import type { AuthSignInRequest, AuthState } from "@satori/ipc-contract/ipc/contract"
 
 export type AuthViewState = { readonly _tag: "Loading" } | AuthState
@@ -29,7 +29,7 @@ export const useAuth = (): UseAuthResult => {
     const program = Effect.gen(function* () {
       const ipcService = yield* IpcClientService
       return yield* ipcService.authStatus
-    }).pipe(Effect.provide(IpcClientServiceLive))
+    }).pipe(Effect.provide(IpcClientService.Default))
 
     const promise = Effect.runPromise(program)
     promise.then(setAuthState, () => setAuthState({ _tag: "Unauthenticated" }))
@@ -62,7 +62,7 @@ export const useAuth = (): UseAuthResult => {
     const program = Effect.gen(function* () {
       const ipcService = yield* IpcClientService
       return yield* ipcService.authSignIn(request)
-    }).pipe(Effect.provide(IpcClientServiceLive))
+    }).pipe(Effect.provide(IpcClientService.Default))
 
     const promise = Effect.runPromise(program)
     promise.then(setAuthState)
@@ -73,7 +73,7 @@ export const useAuth = (): UseAuthResult => {
     const program = Effect.gen(function* () {
       const ipcService = yield* IpcClientService
       return yield* ipcService.authSignOut
-    }).pipe(Effect.provide(IpcClientServiceLive))
+    }).pipe(Effect.provide(IpcClientService.Default))
 
     const promise = Effect.runPromise(program)
     promise.then(setAuthState)

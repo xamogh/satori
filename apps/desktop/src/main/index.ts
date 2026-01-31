@@ -1,25 +1,11 @@
 import { app, BrowserWindow } from "electron"
 import { electronApp, optimizer } from "@electron-toolkit/utils"
-import { FetchHttpClient } from "@effect/platform"
-import { NodeFileSystem } from "@effect/platform-node"
 import { Effect, Layer, Exit, Cause, Option } from "effect"
 import { APP_USER_MODEL_ID } from "./constants/window"
-import { WindowService, WindowServiceLive } from "./services/WindowService"
-import { IpcService, IpcServiceLive } from "./services/IpcService"
-import { AuthServiceLive } from "./services/AuthService"
-import { LocalDbServiceLive } from "./services/LocalDbService"
-import { DataServiceLive } from "./services/DataService"
-import { SyncServiceLive } from "./services/SyncService"
+import { WindowService } from "./services/WindowService"
+import { IpcService } from "./services/IpcService"
 
-const PlatformLive = Layer.mergeAll(NodeFileSystem.layer, FetchHttpClient.layer)
-
-const DataWithDbLive = Layer.provideMerge(LocalDbServiceLive)(DataServiceLive)
-const CoreLive = Layer.provideMerge(AuthServiceLive)(DataWithDbLive).pipe(
-  Layer.provideMerge(PlatformLive)
-)
-const CoreWithSyncLive = Layer.provideMerge(CoreLive)(SyncServiceLive)
-const IpcWithDepsLive = Layer.provideMerge(CoreWithSyncLive)(IpcServiceLive)
-const MainLive = Layer.mergeAll(WindowServiceLive, IpcWithDepsLive)
+const MainLive = Layer.mergeAll(WindowService.Default, IpcService.Default)
 
 const initializeApp = Effect.gen(function* () {
   electronApp.setAppUserModelId(APP_USER_MODEL_ID)

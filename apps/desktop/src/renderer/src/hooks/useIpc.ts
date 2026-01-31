@@ -1,6 +1,6 @@
 import { useCallback } from "react"
 import { Effect } from "effect"
-import { IpcClientService, IpcClientServiceLive } from "../services/IpcClientService"
+import { IpcClientService } from "../services/IpcClientService"
 import type { IpcRequest, IpcResponse } from "@satori/ipc-contract/ipc/contract"
 
 export type UseIpcResult = {
@@ -13,7 +13,7 @@ export const useIpc = (): UseIpcResult => {
     const program = Effect.gen(function* () {
       const ipcService = yield* IpcClientService
       return yield* ipcService.ping
-    }).pipe(Effect.provide(IpcClientServiceLive))
+    }).pipe(Effect.provide(IpcClientService.Default))
 
     return Effect.runPromise(program)
   }, [])
@@ -23,7 +23,7 @@ export const useIpc = (): UseIpcResult => {
       const program = Effect.gen(function* () {
         const ipcService = yield* IpcClientService
         return yield* ipcService.echo(payload)
-      }).pipe(Effect.provide(IpcClientServiceLive))
+      }).pipe(Effect.provide(IpcClientService.Default))
 
       return Effect.runPromise(program)
     },

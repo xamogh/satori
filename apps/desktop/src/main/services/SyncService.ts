@@ -1,5 +1,5 @@
-import { Cause, Context, Effect, Either, Layer, Option, Schema } from "effect"
-import { HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform"
+import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform"
+import { Cause, Effect, Either, Option, Schema } from "effect"
 import { AuthService } from "./AuthService"
 import { LocalDbService } from "./LocalDbService"
 import { getApiConfig } from "../utils/apiConfig"
@@ -49,14 +49,6 @@ const HttpErrorSchema = Schema.Union(Unauthorized, BadRequest, InternalServerErr
 
 const opPlaceholderParams = (count: number): string =>
   Array.from({ length: count }, () => "?").join(",")
-
-export class SyncService extends Context.Tag("SyncService")<
-  SyncService,
-  {
-    readonly getStatus: Effect.Effect<SyncStatus, never>
-    readonly syncNow: Effect.Effect<SyncStatus, never>
-  }
->() {}
 
 const makeSyncService = Effect.gen(function* () {
   const authService = yield* AuthService
@@ -408,7 +400,10 @@ where excluded.updated_at_ms >= photos.updated_at_ms
     }, SYNC_INTERVAL_MS)
   })
 
-  return { getStatus, syncNow }
+  return { getStatus, syncNow } as const
 })
 
-export const SyncServiceLive = Layer.effect(SyncService, makeSyncService)
+export class SyncService extends Effect.Service<SyncService>()("services/SyncService", {
+  dependencies: [FetchHttpClient.layer, AuthService.Default, LocalDbService.Default],
+  effect: makeSyncService,
+}) {}

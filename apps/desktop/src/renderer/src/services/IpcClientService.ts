@@ -1,4 +1,4 @@
-import { Effect, Context, Layer } from "effect"
+import { Effect } from "effect"
 import { IpcCommunicationError, IpcRemoteError } from "../errors"
 import {
   IpcRoutes,
@@ -8,33 +8,8 @@ import {
   type IpcResponse,
 } from "@satori/ipc-contract/ipc/contract"
 
-export class IpcClientService extends Context.Tag("IpcClientService")<
-  IpcClientService,
-  {
-    readonly authStatus: Effect.Effect<
-      AuthState,
-      IpcCommunicationError | IpcRemoteError
-    >
-    readonly authSignIn: (
-      payload: AuthSignInRequest
-    ) => Effect.Effect<AuthState, IpcCommunicationError | IpcRemoteError>
-    readonly authSignOut: Effect.Effect<
-      AuthState,
-      IpcCommunicationError | IpcRemoteError
-    >
-
-    readonly ping: Effect.Effect<
-      IpcResponse<"ping">,
-      IpcCommunicationError | IpcRemoteError
-    >
-    readonly echo: (
-      payload: IpcRequest<"echo">
-    ) => Effect.Effect<IpcResponse<"echo">, IpcCommunicationError | IpcRemoteError>
-  }
->() {}
-
-const makeIpcClientService = Effect.sync(() => ({
-  authStatus: Effect.tryPromise({
+const makeIpcClientService = Effect.sync(() => {
+  const authStatus: Effect.Effect<AuthState, IpcCommunicationError | IpcRemoteError> = Effect.tryPromise({
     try: async () => {
       const result = await window.api.authStatus()
       if (result._tag === "Ok") {
@@ -54,9 +29,11 @@ const makeIpcClientService = Effect.sync(() => ({
             channel: IpcRoutes.authStatus.channel,
             cause: error,
           }),
-  }),
+  })
 
-  authSignIn: (payload) =>
+  const authSignIn = (
+    payload: AuthSignInRequest
+  ): Effect.Effect<AuthState, IpcCommunicationError | IpcRemoteError> =>
     Effect.tryPromise({
       try: async () => {
         const result = await window.api.authSignIn(payload)
@@ -77,9 +54,9 @@ const makeIpcClientService = Effect.sync(() => ({
               channel: IpcRoutes.authSignIn.channel,
               cause: error,
             }),
-    }),
+    })
 
-  authSignOut: Effect.tryPromise({
+  const authSignOut: Effect.Effect<AuthState, IpcCommunicationError | IpcRemoteError> = Effect.tryPromise({
     try: async () => {
       const result = await window.api.authSignOut()
       if (result._tag === "Ok") {
@@ -99,9 +76,9 @@ const makeIpcClientService = Effect.sync(() => ({
             channel: IpcRoutes.authSignOut.channel,
             cause: error,
           }),
-  }),
+  })
 
-  ping: Effect.tryPromise({
+  const ping: Effect.Effect<IpcResponse<"ping">, IpcCommunicationError | IpcRemoteError> = Effect.tryPromise({
     try: async () => {
       const result = await window.api.ping()
       if (result._tag === "Ok") {
@@ -121,9 +98,11 @@ const makeIpcClientService = Effect.sync(() => ({
             channel: IpcRoutes.ping.channel,
             cause: error,
           }),
-  }),
+  })
 
-  echo: (payload) =>
+  const echo = (
+    payload: IpcRequest<"echo">
+  ): Effect.Effect<IpcResponse<"echo">, IpcCommunicationError | IpcRemoteError> =>
     Effect.tryPromise({
       try: async () => {
         const result = await window.api.echo(payload)
@@ -144,10 +123,12 @@ const makeIpcClientService = Effect.sync(() => ({
               channel: IpcRoutes.echo.channel,
               cause: error,
             }),
-    }),
-}))
+    })
 
-export const IpcClientServiceLive = Layer.effect(
-  IpcClientService,
-  makeIpcClientService
-)
+  return { authStatus, authSignIn, authSignOut, ping, echo } as const
+})
+
+export class IpcClientService extends Effect.Service<IpcClientService>()("services/IpcClientService", {
+  dependencies: [],
+  effect: makeIpcClientService,
+}) {}

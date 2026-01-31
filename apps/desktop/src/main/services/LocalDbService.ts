@@ -2,7 +2,8 @@ import { app } from "electron"
 import { join } from "node:path"
 import Database from "better-sqlite3"
 import { FileSystem } from "@effect/platform"
-import { Cause, Context, Effect, Exit, Layer, Option, Schema } from "effect"
+import { NodeFileSystem } from "@effect/platform-node"
+import { Cause, Effect, Exit, Option, Schema } from "effect"
 import { LOCAL_DB_FILENAME, LOCAL_DB_PRAGMAS, LOCAL_DB_SCHEMA_SQL } from "../constants/localDb"
 import { LocalDbMigrationError, LocalDbOpenError, LocalDbQueryError } from "../errors"
 
@@ -16,30 +17,6 @@ const toParamsArray = (params: SqliteParams): Array<SqliteValue> => Array.from(p
 const userDataDir = (): string => app.getPath("userData")
 
 const dbFilePath = (): string => join(userDataDir(), LOCAL_DB_FILENAME)
-
-export class LocalDbService extends Context.Tag("LocalDbService")<
-  LocalDbService,
-  {
-    readonly exec: (sql: string) => Effect.Effect<void, LocalDbQueryError>
-    readonly run: (
-      sql: string,
-      params: SqliteParams
-    ) => Effect.Effect<Database.RunResult, LocalDbQueryError>
-    readonly get: <A, I>(
-      sql: string,
-      schema: Schema.Schema<A, I, never>,
-      params: SqliteParams
-    ) => Effect.Effect<Option.Option<A>, LocalDbQueryError>
-    readonly all: <A, I>(
-      sql: string,
-      schema: Schema.Schema<A, I, never>,
-      params: SqliteParams
-    ) => Effect.Effect<ReadonlyArray<A>, LocalDbQueryError>
-    readonly transaction: <A, E>(
-      effect: Effect.Effect<A, E>
-    ) => Effect.Effect<A, E | LocalDbQueryError>
-  }
->() {}
 
 const makeClient = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
@@ -209,7 +186,10 @@ const makeClient = Effect.gen(function* () {
       return yield* Effect.failCause(exit.cause)
     })
 
-  return { exec, run, get, all, transaction }
+  return { exec, run, get, all, transaction } as const
 })
 
-export const LocalDbServiceLive = Layer.effect(LocalDbService, makeClient)
+export class LocalDbService extends Effect.Service<LocalDbService>()("services/LocalDbService", {
+  dependencies: [NodeFileSystem.layer],
+  effect: makeClient,
+}) {}
