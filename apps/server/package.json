@@ -1,0 +1,23 @@
+{
+  "name": "@satori/server",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "pnpm -C ../../packages/shared build && tsc -p tsconfig.json --noEmit",
+    "start": "pnpm -C ../../packages/shared build && pnpm -s build && node --env-file-if-exists ../../.env dist/index.js",
+    "dev": "pnpm -s start",
+    "migrate": "pnpm -C ../../packages/shared build && pnpm -s build && node --env-file-if-exists ../../.env dist/scripts/migrate.js",
+    "create-user": "pnpm -C ../../packages/shared build && pnpm -s build && node --env-file-if-exists ../../.env dist/scripts/create-user.js"
+  },
+  "dependencies": {
+    "@satori/shared": "workspace:*",
+    "effect": "^3.19.15",
+    "pg": "^8.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "@types/pg": "^8.15.5",
+    "typescript": "^5.9.3"
+  }
+}

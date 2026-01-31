@@ -1,0 +1,5 @@
+export const DATABASE_URL_ENV = "DATABASE_URL"
+export const JWT_SECRET_ENV = "JWT_SECRET"
+export const JWT_EXPIRES_IN_SECONDS_ENV = "JWT_EXPIRES_IN_SECONDS"
+export const PORT_ENV = "PORT"
+

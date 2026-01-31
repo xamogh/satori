@@ -1,0 +1,70 @@
+{
+  "name": "@satori/shared",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "effect": "^3.19.15"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "exports": {
+    "./api/contract": {
+      "types": "./dist/api/contract.d.ts",
+      "default": "./dist/api/contract.js"
+    },
+    "./auth/schemas": {
+      "types": "./dist/auth/schemas.d.ts",
+      "default": "./dist/auth/schemas.js"
+    },
+    "./domain/attendance": {
+      "types": "./dist/domain/attendance.d.ts",
+      "default": "./dist/domain/attendance.js"
+    },
+    "./domain/common": {
+      "types": "./dist/domain/common.d.ts",
+      "default": "./dist/domain/common.js"
+    },
+    "./domain/event": {
+      "types": "./dist/domain/event.d.ts",
+      "default": "./dist/domain/event.js"
+    },
+    "./domain/person": {
+      "types": "./dist/domain/person.d.ts",
+      "default": "./dist/domain/person.js"
+    },
+    "./domain/photo": {
+      "types": "./dist/domain/photo.d.ts",
+      "default": "./dist/domain/photo.js"
+    },
+    "./domain/registration": {
+      "types": "./dist/domain/registration.d.ts",
+      "default": "./dist/domain/registration.js"
+    },
+    "./ipc/contract": {
+      "types": "./dist/ipc/contract.d.ts",
+      "default": "./dist/ipc/contract.js"
+    },
+    "./sync/schemas": {
+      "types": "./dist/sync/schemas.d.ts",
+      "default": "./dist/sync/schemas.js"
+    },
+    "./utils/errorCause": {
+      "types": "./dist/utils/errorCause.d.ts",
+      "default": "./dist/utils/errorCause.js"
+    },
+    "./utils/json": {
+      "types": "./dist/utils/json.d.ts",
+      "default": "./dist/utils/json.js"
+    },
+    "./utils/parseIssue": {
+      "types": "./dist/utils/parseIssue.d.ts",
+      "default": "./dist/utils/parseIssue.js"
+    }
+  }
+}
+
