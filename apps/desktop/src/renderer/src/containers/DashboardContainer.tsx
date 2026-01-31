@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { CalendarDays, CloudSync, LayoutDashboard, Users } from "lucide-react"
-import type { AuthenticatedState } from "@satori/shared/auth/schemas"
+import type { AuthenticatedState } from "@satori/domain/auth/schemas"
 import { DashboardLayout } from "../components/dashboard/DashboardLayout"
 import { DashboardRoute, type DashboardRoute as DashboardRouteType } from "../constants/dashboardRoutes"
 import { OverviewContainer } from "./OverviewContainer"
@@ -73,4 +73,3 @@ export const DashboardContainer = ({
     </DashboardLayout>
   )
 }
-

@@ -19,10 +19,9 @@ import { formatDateTime } from "../utils/date"
 import {
   EventCreateInputSchema,
   type Event,
-} from "@satori/shared/domain/event"
-import { formatParseIssues } from "@satori/shared/utils/parseIssue"
-import type { SchemaIssue } from "@satori/shared/ipc/contract"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+} from "@satori/domain/domain/event"
+import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
+import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
 
 const normalizeQuery = (raw: string): string | undefined => {
   const trimmed = raw.trim()
@@ -39,7 +38,7 @@ const parseDateTimeLocalMs = (raw: string): number | null => {
   return Number.isFinite(ms) ? ms : null
 }
 
-export const EventsView = () => {
+export const EventsView = (): React.JSX.Element => {
   const [query, setQuery] = useState("")
   const normalizedQuery = useMemo(() => normalizeQuery(query), [query])
 
@@ -70,13 +69,16 @@ export const EventsView = () => {
 
           setError(result.error.message)
         },
-        (reason) => setError(toErrorCause(reason).message)
+        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
       )
       .finally(() => setLoading(false))
   }, [normalizedQuery])
 
   useEffect(() => {
-    refresh()
+    const id = window.setTimeout(() => {
+      refresh()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [refresh])
 
   const submitCreate = useCallback((): void => {
@@ -123,7 +125,7 @@ export const EventsView = () => {
 
         setCreateError(result.error.message)
       },
-      (reason) => setCreateError(toErrorCause(reason).message)
+      (reason) => setCreateError(reason instanceof Error ? reason.message : String(reason))
     )
   }, [createDescription, createEndsAt, createStartsAt, createTitle, refresh])
 
@@ -138,7 +140,7 @@ export const EventsView = () => {
           }
           setError(result.error.message)
         },
-        (reason) => setError(toErrorCause(reason).message)
+        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
       )
     },
     [refresh]

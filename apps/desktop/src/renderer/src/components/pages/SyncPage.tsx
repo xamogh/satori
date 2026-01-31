@@ -1,4 +1,4 @@
-import type { SyncStatus } from "@satori/shared/sync/schemas"
+import type { SyncStatus } from "@satori/domain/sync/schemas"
 import { Button } from "../ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { formatDateTime } from "../../utils/date"
@@ -75,4 +75,3 @@ export const SyncPage = ({
     </Card>
   </div>
 )
-

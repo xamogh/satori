@@ -4,14 +4,17 @@
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "pnpm -C ../../packages/shared build && tsc -p tsconfig.json --noEmit",
-    "start": "pnpm -C ../../packages/shared build && pnpm -s build && node --env-file-if-exists ../../.env dist/index.js",
+    "typecheck": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && tsc -p tsconfig.json --noEmit",
+    "start": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && pnpm -s build && node --env-file-if-exists ../../.env dist/index.js",
     "dev": "pnpm -s start",
-    "migrate": "pnpm -C ../../packages/shared build && pnpm -s build && node --env-file-if-exists ../../.env dist/scripts/migrate.js",
-    "create-user": "pnpm -C ../../packages/shared build && pnpm -s build && node --env-file-if-exists ../../.env dist/scripts/create-user.js"
+    "migrate": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && pnpm -s build && node --env-file-if-exists ../../.env dist/scripts/migrate.js",
+    "create-user": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && pnpm -s build && node --env-file-if-exists ../../.env dist/scripts/create-user.js"
   },
   "dependencies": {
-    "@satori/shared": "workspace:*",
+    "@effect/platform": "0.93.6",
+    "@effect/platform-node": "0.103.0",
+    "@satori/api-contract": "workspace:*",
+    "@satori/domain": "workspace:*",
     "effect": "^3.19.15",
     "pg": "^8.17.2"
   },

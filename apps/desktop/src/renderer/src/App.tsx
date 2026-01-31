@@ -10,9 +10,8 @@ import { SchemaIssueList } from "./components/SchemaIssueList"
 import { EventsView } from "./containers/EventsView"
 import { PeopleView } from "./containers/PeopleView"
 import { SyncView } from "./containers/SyncView"
-import { AuthSignInRequestSchema, type SchemaIssue } from "@satori/shared/ipc/contract"
-import { formatParseIssues } from "@satori/shared/utils/parseIssue"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+import { AuthSignInRequestSchema, type SchemaIssue } from "@satori/ipc-contract/ipc/contract"
+import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
 
 function App(): React.JSX.Element {
   const { authState, signIn, signOut } = useAuth()
@@ -36,12 +35,16 @@ function App(): React.JSX.Element {
     }
 
     setIssues([])
-    signIn(decoded.right).catch((reason) => setError(toErrorCause(reason).message))
+    signIn(decoded.right).catch((reason) =>
+      setError(reason instanceof Error ? reason.message : String(reason))
+    )
   }, [email, password, signIn])
 
   const handleSignOut = useCallback((): void => {
     setError("")
-    signOut().catch((reason) => setError(toErrorCause(reason).message))
+    signOut().catch((reason) =>
+      setError(reason instanceof Error ? reason.message : String(reason))
+    )
   }, [signOut])
 
   if (authState._tag === "Loading") {

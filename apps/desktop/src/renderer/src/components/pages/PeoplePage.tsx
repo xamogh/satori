@@ -1,6 +1,7 @@
-import type { Person } from "@satori/shared/domain/person"
-import type { SchemaIssue } from "@satori/shared/ipc/contract"
-import { Button, buttonVariants } from "../ui/button"
+import type { Person } from "@satori/domain/domain/person"
+import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
+import { Button } from "../ui/button"
+import { buttonVariants } from "../ui/button-variants"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import {
   Dialog,

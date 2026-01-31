@@ -6,7 +6,9 @@ Local-first Electron desktop app with a small Postgres-backed auth/sync service.
 
 - `apps/desktop`: Electron desktop app (main/preload/renderer)
 - `apps/server`: Postgres-backed auth + sync API
-- `packages/shared`: shared Effect Schema contracts (API + IPC + domain + sync)
+- `packages/domain`: shared domain schemas/types (auth + domain + sync)
+- `packages/api-contract`: shared HttpApi definition + HTTP error/auth contracts (client + server)
+- `packages/ipc-contract`: shared IPC contract (desktop preload + main)
 
 ## Recommended IDE Setup
 

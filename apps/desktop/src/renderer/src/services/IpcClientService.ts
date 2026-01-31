@@ -6,8 +6,7 @@ import {
   type AuthState,
   type IpcRequest,
   type IpcResponse,
-} from "@satori/shared/ipc/contract"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+} from "@satori/ipc-contract/ipc/contract"
 
 export class IpcClientService extends Context.Tag("IpcClientService")<
   IpcClientService,
@@ -53,7 +52,7 @@ const makeIpcClientService = Effect.sync(() => ({
         : new IpcCommunicationError({
             message: "Failed to invoke IPC route: authStatus",
             channel: IpcRoutes.authStatus.channel,
-            cause: toErrorCause(error),
+            cause: error,
           }),
   }),
 
@@ -76,7 +75,7 @@ const makeIpcClientService = Effect.sync(() => ({
           : new IpcCommunicationError({
               message: "Failed to invoke IPC route: authSignIn",
               channel: IpcRoutes.authSignIn.channel,
-              cause: toErrorCause(error),
+              cause: error,
             }),
     }),
 
@@ -98,7 +97,7 @@ const makeIpcClientService = Effect.sync(() => ({
         : new IpcCommunicationError({
             message: "Failed to invoke IPC route: authSignOut",
             channel: IpcRoutes.authSignOut.channel,
-            cause: toErrorCause(error),
+            cause: error,
           }),
   }),
 
@@ -120,7 +119,7 @@ const makeIpcClientService = Effect.sync(() => ({
         : new IpcCommunicationError({
             message: "Failed to invoke IPC route: ping",
             channel: IpcRoutes.ping.channel,
-            cause: toErrorCause(error),
+            cause: error,
           }),
   }),
 
@@ -143,7 +142,7 @@ const makeIpcClientService = Effect.sync(() => ({
           : new IpcCommunicationError({
               message: "Failed to invoke IPC route: echo",
               channel: IpcRoutes.echo.channel,
-              cause: toErrorCause(error),
+              cause: error,
             }),
     }),
 }))

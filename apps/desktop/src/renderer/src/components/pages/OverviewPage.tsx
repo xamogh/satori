@@ -1,4 +1,4 @@
-import type { Event } from "@satori/shared/domain/event"
+import type { Event } from "@satori/domain/domain/event"
 import { Button } from "../ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
@@ -131,4 +131,3 @@ export const OverviewPage = ({
     </Card>
   </div>
 )
-

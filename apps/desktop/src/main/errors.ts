@@ -1,11 +1,10 @@
 import { Schema } from "effect"
-import { ErrorCauseSchema } from "@satori/shared/utils/errorCause"
 
 export class WindowCreationError extends Schema.TaggedError<WindowCreationError>(
   "WindowCreationError"
 )("WindowCreationError", {
   message: Schema.String,
-  cause: ErrorCauseSchema,
+  cause: Schema.Unknown,
 }) {}
 
 export class IpcError extends Schema.TaggedError<IpcError>("IpcError")(
@@ -13,7 +12,7 @@ export class IpcError extends Schema.TaggedError<IpcError>("IpcError")(
   {
     message: Schema.String,
     channel: Schema.String,
-    cause: ErrorCauseSchema,
+    cause: Schema.Unknown,
   }
 ) {}
 
@@ -22,22 +21,22 @@ export class FileLoadError extends Schema.TaggedError<FileLoadError>(
 )("FileLoadError", {
   message: Schema.String,
   path: Schema.String,
-  cause: ErrorCauseSchema,
+  cause: Schema.Unknown,
 }) {}
 
 export class ApiConfigError extends Schema.TaggedError<ApiConfigError>(
   "ApiConfigError"
 )("ApiConfigError", {
   message: Schema.String,
-  cause: ErrorCauseSchema,
+  cause: Schema.Unknown,
 }) {}
 
 export class ApiAuthError extends Schema.TaggedError<ApiAuthError>("ApiAuthError")(
   "ApiAuthError",
   {
-  message: Schema.String,
-  statusCode: Schema.Number,
-  cause: ErrorCauseSchema,
+    message: Schema.String,
+    statusCode: Schema.Number,
+    cause: Schema.Unknown,
   }
 ) {}
 
@@ -46,7 +45,7 @@ export class AuthStorageError extends Schema.TaggedError<AuthStorageError>(
 )("AuthStorageError", {
   message: Schema.String,
   path: Schema.String,
-  cause: ErrorCauseSchema,
+  cause: Schema.Unknown,
 }) {}
 
 export class UnauthorizedError extends Schema.TaggedError<UnauthorizedError>(
@@ -67,14 +66,14 @@ export class LocalDbOpenError extends Schema.TaggedError<LocalDbOpenError>(
 )("LocalDbOpenError", {
   message: Schema.String,
   path: Schema.String,
-  cause: ErrorCauseSchema,
+  cause: Schema.Unknown,
 }) {}
 
 export class LocalDbMigrationError extends Schema.TaggedError<LocalDbMigrationError>(
   "LocalDbMigrationError"
 )("LocalDbMigrationError", {
   message: Schema.String,
-  cause: ErrorCauseSchema,
+  cause: Schema.Unknown,
 }) {}
 
 export class LocalDbQueryError extends Schema.TaggedError<LocalDbQueryError>(
@@ -82,7 +81,7 @@ export class LocalDbQueryError extends Schema.TaggedError<LocalDbQueryError>(
 )("LocalDbQueryError", {
   message: Schema.String,
   query: Schema.String,
-  cause: ErrorCauseSchema,
+  cause: Schema.Unknown,
 }) {}
 
 export class EntityNotFoundError extends Schema.TaggedError<EntityNotFoundError>(
@@ -97,5 +96,5 @@ export class OutboxEncodeError extends Schema.TaggedError<OutboxEncodeError>(
   "OutboxEncodeError"
 )("OutboxEncodeError", {
   message: Schema.String,
-  cause: ErrorCauseSchema,
+  cause: Schema.Unknown,
 }) {}

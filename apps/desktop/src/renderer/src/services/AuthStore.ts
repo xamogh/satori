@@ -1,5 +1,5 @@
 import { createStore } from "../utils/store"
-import type { AuthSignInRequest, AuthState, IpcResult } from "@satori/shared/ipc/contract"
+import type { AuthSignInRequest, AuthState, IpcResult } from "@satori/ipc-contract/ipc/contract"
 
 export type AuthViewState = { readonly _tag: "Loading" } | AuthState
 
@@ -92,4 +92,3 @@ export const AuthStore = {
   signIn,
   signOut,
 } as const
-

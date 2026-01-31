@@ -5,8 +5,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "target": "ES2022",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -17,4 +17,3 @@
   },
   "include": ["src/**/*"]
 }
-

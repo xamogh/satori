@@ -1,9 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto"
 import { Effect, Schema } from "effect"
-import { UserRoleSchema } from "@satori/shared/auth/schemas"
+import { UserRoleSchema } from "@satori/domain/auth/schemas"
 import { JwtError } from "../errors"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
-import type { Json } from "@satori/shared/utils/json"
 
 const base64UrlEncodeBytes = (bytes: Uint8Array): string =>
   Buffer.from(bytes)
@@ -67,17 +65,20 @@ export const signJwt = (
     catch: (error) =>
       new JwtError({
         message: "Failed to sign JWT",
-        cause: toErrorCause(error),
+        cause: error,
       }),
   })
 
-const decodePart = (part: string): Effect.Effect<Json, JwtError> =>
+const decodePart = (part: string): Effect.Effect<unknown, JwtError> =>
   Effect.try({
-    try: () => JSON.parse(base64UrlDecode(part)) as Json,
+    try: () => {
+      const parsed: unknown = JSON.parse(base64UrlDecode(part))
+      return parsed
+    },
     catch: (error) =>
       new JwtError({
         message: "Invalid JWT encoding",
-        cause: toErrorCause(error),
+        cause: error,
       }),
   })
 
@@ -91,7 +92,7 @@ export const verifyJwt = (
       return yield* Effect.fail(
         new JwtError({
           message: "Invalid JWT format",
-          cause: toErrorCause("Expected 3 segments"),
+          cause: "Expected 3 segments",
         })
       )
     }
@@ -104,7 +105,7 @@ export const verifyJwt = (
       return yield* Effect.fail(
         new JwtError({
           message: "Invalid JWT signature",
-          cause: toErrorCause("Signature mismatch"),
+          cause: "Signature mismatch",
         })
       )
     }
@@ -118,7 +119,7 @@ export const verifyJwt = (
       return yield* Effect.fail(
         new JwtError({
           message: "Invalid JWT signature",
-          cause: toErrorCause("Signature mismatch"),
+          cause: "Signature mismatch",
         })
       )
     }
@@ -130,7 +131,7 @@ export const verifyJwt = (
       Effect.mapError((error) =>
         new JwtError({
           message: "Invalid JWT header",
-          cause: toErrorCause(error),
+          cause: error,
         })
       )
     )
@@ -139,7 +140,7 @@ export const verifyJwt = (
       Effect.mapError((error) =>
         new JwtError({
           message: "Invalid JWT payload",
-          cause: toErrorCause(error),
+          cause: error,
         })
       )
     )
@@ -149,7 +150,7 @@ export const verifyJwt = (
       return yield* Effect.fail(
         new JwtError({
           message: "JWT expired",
-          cause: toErrorCause("Token expired"),
+          cause: "Token expired",
         })
       )
     }

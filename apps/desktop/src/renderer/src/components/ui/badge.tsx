@@ -26,5 +26,4 @@ const Badge = ({ className, variant, ...props }: BadgeProps): React.JSX.Element 
   <div className={cn(badgeVariants({ variant }), className)} {...props} />
 )
 
-export { Badge, badgeVariants }
-
+export { Badge }

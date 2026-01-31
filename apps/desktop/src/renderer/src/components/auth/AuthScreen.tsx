@@ -1,4 +1,4 @@
-import type { SchemaIssue } from "@satori/shared/ipc/contract"
+import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
 import { Button } from "../ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Input } from "../ui/input"
@@ -69,4 +69,3 @@ export const AuthScreen = ({
     </Card>
   </div>
 )
-

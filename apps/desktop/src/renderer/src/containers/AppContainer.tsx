@@ -2,10 +2,9 @@ import { useCallback, useState, useSyncExternalStore } from "react"
 import { Either, Schema } from "effect"
 import { AuthScreen } from "../components/auth/AuthScreen"
 import { DashboardContainer } from "./DashboardContainer"
-import { AuthSignInRequestSchema } from "@satori/shared/ipc/contract"
-import type { SchemaIssue } from "@satori/shared/ipc/contract"
-import { formatParseIssues } from "@satori/shared/utils/parseIssue"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+import { AuthSignInRequestSchema } from "@satori/ipc-contract/ipc/contract"
+import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
+import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
 import { AuthStore } from "../services/AuthStore"
 
 export const AppContainer = (): React.JSX.Element => {
@@ -42,7 +41,7 @@ export const AppContainer = (): React.JSX.Element => {
 
         setError(result.error.message)
       },
-      (reason) => setError(toErrorCause(reason).message)
+      (reason) => setError(reason instanceof Error ? reason.message : String(reason))
     )
   }, [email, password])
 
@@ -53,7 +52,7 @@ export const AppContainer = (): React.JSX.Element => {
         if (result._tag === "Ok") return
         setError(result.error.message)
       },
-      (reason) => setError(toErrorCause(reason).message)
+      (reason) => setError(reason instanceof Error ? reason.message : String(reason))
     )
   }, [])
 

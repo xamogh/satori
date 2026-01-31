@@ -1,10 +1,10 @@
-import type { SchemaIssue } from "@satori/shared/ipc/contract"
+import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
 
 export type SchemaIssueListProps = {
   readonly issues: ReadonlyArray<SchemaIssue>
 }
 
-export const SchemaIssueList = ({ issues }: SchemaIssueListProps) => {
+export const SchemaIssueList = ({ issues }: SchemaIssueListProps): React.JSX.Element | null => {
   if (issues.length === 0) {
     return null
   }

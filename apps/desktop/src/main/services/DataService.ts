@@ -10,7 +10,7 @@ import {
   type EventDeleteInput,
   type EventListQuery,
   type EventUpdateInput,
-} from "@satori/shared/domain/event"
+} from "@satori/domain/domain/event"
 import {
   PersonSchema,
   type Person,
@@ -18,7 +18,7 @@ import {
   type PersonDeleteInput,
   type PersonListQuery,
   type PersonUpdateInput,
-} from "@satori/shared/domain/person"
+} from "@satori/domain/domain/person"
 import {
   RegistrationSchema,
   type Registration,
@@ -26,7 +26,7 @@ import {
   type RegistrationDeleteInput,
   type RegistrationListQuery,
   type RegistrationUpdateInput,
-} from "@satori/shared/domain/registration"
+} from "@satori/domain/domain/registration"
 import {
   AttendanceSchema,
   type Attendance,
@@ -34,10 +34,9 @@ import {
   type AttendanceDeleteInput,
   type AttendanceListQuery,
   type AttendanceUpdateInput,
-} from "@satori/shared/domain/attendance"
-import { PhotoSchema, type Photo, type PhotoCreateInput, type PhotoDeleteInput } from "@satori/shared/domain/photo"
-import { SyncOperationSchema } from "@satori/shared/sync/schemas"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+} from "@satori/domain/domain/attendance"
+import { PhotoSchema, type Photo, type PhotoCreateInput, type PhotoDeleteInput } from "@satori/domain/domain/photo"
+import { SyncOperationSchema } from "@satori/domain/sync/schemas"
 
 const nowMs = (): number => Date.now()
 
@@ -58,7 +57,7 @@ const encodeSyncOperationJson = (
       (error) =>
         new OutboxEncodeError({
           message: "Failed to encode outbox operation",
-          cause: toErrorCause(error),
+          cause: error,
         })
     )
   )

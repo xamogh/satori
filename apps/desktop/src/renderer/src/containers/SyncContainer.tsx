@@ -1,6 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react"
-import type { SyncStatus } from "@satori/shared/sync/schemas"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+import type { SyncStatus } from "@satori/domain/sync/schemas"
 import { SyncPage } from "../components/pages/SyncPage"
 import { createStore } from "../utils/store"
 
@@ -57,7 +56,7 @@ const refreshSyncState = (mode: "status" | "now"): Promise<void> => {
         syncStore.updateSnapshot((current) => ({
           ...current,
           loading: false,
-          error: toErrorCause(reason).message,
+          error: reason instanceof Error ? reason.message : String(reason),
         }))
       }
     )
@@ -98,4 +97,3 @@ export const SyncContainer = (): React.JSX.Element => {
     <SyncPage status={status} loading={loading} error={error} onRefresh={refresh} onSyncNow={syncNow} />
   )
 }
-

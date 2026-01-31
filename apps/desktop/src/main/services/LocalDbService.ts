@@ -1,11 +1,10 @@
 import { app } from "electron"
-import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 import Database from "better-sqlite3"
+import { FileSystem } from "@effect/platform"
 import { Cause, Context, Effect, Exit, Layer, Option, Schema } from "effect"
 import { LOCAL_DB_FILENAME, LOCAL_DB_PRAGMAS, LOCAL_DB_SCHEMA_SQL } from "../constants/localDb"
 import { LocalDbMigrationError, LocalDbOpenError, LocalDbQueryError } from "../errors"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
 
 export type SqliteValue = string | number | bigint | Uint8Array | null
 
@@ -43,19 +42,19 @@ export class LocalDbService extends Context.Tag("LocalDbService")<
 >() {}
 
 const makeClient = Effect.gen(function* () {
+  const fs = yield* FileSystem.FileSystem
   const dataDir = userDataDir()
 
-  yield* Effect.try({
-    try: () => {
-      mkdirSync(dataDir, { recursive: true })
-    },
-    catch: (error) =>
-      new LocalDbOpenError({
-        message: "Failed to create app data directory",
-        path: dataDir,
-        cause: toErrorCause(error),
-      }),
-  })
+  yield* fs.makeDirectory(dataDir, { recursive: true }).pipe(
+    Effect.mapError(
+      (cause) =>
+        new LocalDbOpenError({
+          message: "Failed to create app data directory",
+          path: dataDir,
+          cause,
+        })
+    )
+  )
 
   const filePath = dbFilePath()
 
@@ -65,7 +64,7 @@ const makeClient = Effect.gen(function* () {
       new LocalDbOpenError({
         message: "Failed to open local database",
         path: filePath,
-        cause: toErrorCause(error),
+        cause: error,
       }),
   })
 
@@ -77,7 +76,7 @@ const makeClient = Effect.gen(function* () {
       catch: (error) =>
         new LocalDbMigrationError({
           message: `Failed to apply PRAGMA: ${pragma}`,
-          cause: toErrorCause(error),
+          cause: error,
         }),
     })
   }
@@ -89,7 +88,7 @@ const makeClient = Effect.gen(function* () {
     catch: (error) =>
       new LocalDbMigrationError({
         message: "Failed to migrate local database schema",
-        cause: toErrorCause(error),
+        cause: error,
       }),
   })
 
@@ -102,7 +101,7 @@ const makeClient = Effect.gen(function* () {
         new LocalDbQueryError({
           message: "Local DB exec failed",
           query: sql,
-          cause: toErrorCause(error),
+          cause: error,
         }),
     })
 
@@ -116,7 +115,7 @@ const makeClient = Effect.gen(function* () {
         new LocalDbQueryError({
           message: "Local DB query failed",
           query: sql,
-          cause: toErrorCause(error),
+          cause: error,
         }),
     })
 
@@ -136,7 +135,7 @@ const makeClient = Effect.gen(function* () {
           new LocalDbQueryError({
             message: "Local DB query failed",
             query: sql,
-            cause: toErrorCause(error),
+            cause: error,
           }),
       })
 
@@ -149,7 +148,7 @@ const makeClient = Effect.gen(function* () {
           new LocalDbQueryError({
             message: "Local DB returned invalid shape",
             query: sql,
-            cause: toErrorCause(error),
+            cause: error,
           })
         )
       )
@@ -173,7 +172,7 @@ const makeClient = Effect.gen(function* () {
           new LocalDbQueryError({
             message: "Local DB query failed",
             query: sql,
-            cause: toErrorCause(error),
+            cause: error,
           }),
       })
 
@@ -182,7 +181,7 @@ const makeClient = Effect.gen(function* () {
           new LocalDbQueryError({
             message: "Local DB returned invalid shape",
             query: sql,
-            cause: toErrorCause(error),
+            cause: error,
           })
         )
       )

@@ -1,9 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { Cause, Effect, Exit, ParseResult, Schema } from 'effect'
-import { IpcResultSchema, IpcRoutes, makeErr, type IpcApi, type IpcResult } from '@satori/shared/ipc/contract'
-import { formatParseIssues } from '@satori/shared/utils/parseIssue'
-import { toErrorCause } from '@satori/shared/utils/errorCause'
+import { Cause, Effect, Exit, Option, ParseResult, Schema } from 'effect'
+import { IpcResultSchema, IpcRoutes, makeErr, type IpcApi, type IpcResult } from '@satori/ipc-contract/ipc/contract'
+import { formatParseIssues } from '@satori/ipc-contract/utils/parseIssue'
 
 const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
   route: {
@@ -24,18 +23,28 @@ const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
     })
   }
 
-  let rawResult: IpcResult<ResponseEncoded>
-  try {
-    rawResult = await ipcRenderer.invoke(route.channel, encodedPayloadExit.value)
-  } catch (error) {
+  const rawResultExit = await Effect.runPromiseExit(
+    Effect.tryPromise({
+      try: () => ipcRenderer.invoke(route.channel, encodedPayloadExit.value),
+      catch: (cause) => cause,
+    })
+  )
+
+  if (Exit.isFailure(rawResultExit)) {
+    const failure = Cause.failureOption(rawResultExit.cause)
+    const message = Option.match(failure, {
+      onNone: () => Cause.pretty(rawResultExit.cause),
+      onSome: (cause) => (cause instanceof Error ? cause.message : String(cause)),
+    })
+
     return makeErr({
       _tag: 'Defect',
-      message: toErrorCause(error).message,
+      message,
     })
   }
 
   const resultExit = await Effect.runPromiseExit(
-    Schema.decodeUnknown(IpcResultSchema(route.response))(rawResult)
+    Schema.decodeUnknown(IpcResultSchema(route.response))(rawResultExit.value)
   )
 
   if (Exit.isSuccess(resultExit)) {
@@ -90,11 +99,18 @@ const api: IpcApi = {
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
 if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
+  const exit = Effect.runSyncExit(
+    Effect.try({
+      try: () => {
+        contextBridge.exposeInMainWorld('electron', electronAPI)
+        contextBridge.exposeInMainWorld('api', api)
+      },
+      catch: (cause) => cause,
+    })
+  )
+
+  if (Exit.isFailure(exit)) {
+    console.error(Cause.pretty(exit.cause))
   }
 } else {
   const globalWindow = globalThis as typeof globalThis & {

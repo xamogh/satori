@@ -1,25 +1,25 @@
 import { Cause, Context, Effect, Either, Layer, Option, Schema } from "effect"
+import { HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform"
 import { AuthService } from "./AuthService"
 import { LocalDbService } from "./LocalDbService"
 import { getApiConfig } from "../utils/apiConfig"
 import { SYNC_BATCH_SIZE, SYNC_INTERVAL_MS } from "../constants/sync"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
-import { ApiResultSchema, ApiRoutes } from "@satori/shared/api/contract"
-import type { Json } from "@satori/shared/utils/json"
+import { BadRequest, InternalServerError, Unauthorized } from "@satori/api-contract/api/http-errors"
 import {
   SyncOperationSchema,
   SyncRequestSchema,
   SyncResponseSchema,
+  type SyncOperation,
   type SyncRequest,
   type SyncResponse,
   type SyncStatus,
-} from "@satori/shared/sync/schemas"
-import { ApiAuthError } from "../errors"
-import type { Attendance } from "@satori/shared/domain/attendance"
-import type { Event } from "@satori/shared/domain/event"
-import type { Person } from "@satori/shared/domain/person"
-import type { Photo } from "@satori/shared/domain/photo"
-import type { Registration } from "@satori/shared/domain/registration"
+} from "@satori/domain/sync/schemas"
+import { ApiAuthError, type LocalDbQueryError } from "../errors"
+import type { Attendance } from "@satori/domain/domain/attendance"
+import type { Event } from "@satori/domain/domain/event"
+import type { Person } from "@satori/domain/domain/person"
+import type { Photo } from "@satori/domain/domain/photo"
+import type { Registration } from "@satori/domain/domain/registration"
 
 const nowMs = (): number => Date.now()
 
@@ -45,52 +45,7 @@ const emptyStatus: SyncStatus = {
   pendingOutboxCount: 0,
 }
 
-const fetchJson = (
-  url: string,
-  init: RequestInit
-): Effect.Effect<{ readonly status: number; readonly body: Json }, ApiAuthError> =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(url, init)
-      const body = (await response.json()) as Json
-      return { status: response.status, body }
-    },
-    catch: (error) =>
-      new ApiAuthError({
-        message: "Network error",
-        statusCode: 0,
-        cause: toErrorCause(error),
-      }),
-  })
-
-const decodeApiResult = <A, I, R>(
-  schema: Schema.Schema<A, I, R>,
-  statusCode: number,
-  body: Json
-): Effect.Effect<A, ApiAuthError, R> =>
-  Schema.decodeUnknown(ApiResultSchema(schema))(body).pipe(
-    Effect.mapError(
-      (error) =>
-        new ApiAuthError({
-          message: "Invalid API response",
-          statusCode,
-          cause: toErrorCause(error),
-        })
-    ),
-    Effect.flatMap((result): Effect.Effect<A, ApiAuthError> => {
-      if (result._tag === "Ok") {
-        return Effect.succeed(result.value)
-      }
-
-      return Effect.fail(
-        new ApiAuthError({
-          message: result.error.message,
-          statusCode,
-          cause: toErrorCause(result.error),
-        })
-      )
-    })
-  )
+const HttpErrorSchema = Schema.Union(Unauthorized, BadRequest, InternalServerError)
 
 const opPlaceholderParams = (count: number): string =>
   Array.from({ length: count }, () => "?").join(",")
@@ -106,6 +61,7 @@ export class SyncService extends Context.Tag("SyncService")<
 const makeSyncService = Effect.gen(function* () {
   const authService = yield* AuthService
   const db = yield* LocalDbService
+  const client = yield* HttpClient.HttpClient
 
   let status: SyncStatus = emptyStatus
   let running = false
@@ -120,7 +76,7 @@ const makeSyncService = Effect.gen(function* () {
     .get("select cursor_ms as cursorMs from sync_state where id = 1", CursorRowSchema, [])
     .pipe(Effect.map((row) => (Option.isNone(row) ? null : row.value.cursorMs)))
 
-  const setCursor = (cursorMs: number) =>
+  const setCursor = (cursorMs: number): Effect.Effect<void, LocalDbQueryError> =>
     db.run("update sync_state set cursor_ms = ? where id = 1", [cursorMs]).pipe(
       Effect.asVoid
     )
@@ -131,14 +87,14 @@ const makeSyncService = Effect.gen(function* () {
     [SYNC_BATCH_SIZE]
   )
 
-  const deleteOutboxOps = (opIds: ReadonlyArray<string>) =>
+  const deleteOutboxOps = (opIds: ReadonlyArray<string>): Effect.Effect<void, LocalDbQueryError> =>
     opIds.length === 0
       ? Effect.void
       : db
           .run(`delete from outbox where op_id in (${opPlaceholderParams(opIds.length)})`, opIds)
           .pipe(Effect.asVoid)
 
-  const upsertEvent = (event: Event) =>
+  const upsertEvent = (event: Event): Effect.Effect<void, LocalDbQueryError> =>
     db.run(
       `
 insert into events (
@@ -166,7 +122,7 @@ where excluded.updated_at_ms >= events.updated_at_ms
       ]
     ).pipe(Effect.asVoid)
 
-  const upsertPerson = (person: Person) =>
+  const upsertPerson = (person: Person): Effect.Effect<void, LocalDbQueryError> =>
     db.run(
       `
 insert into persons (
@@ -194,7 +150,9 @@ where excluded.updated_at_ms >= persons.updated_at_ms
       ]
     ).pipe(Effect.asVoid)
 
-  const upsertRegistration = (registration: Registration) =>
+  const upsertRegistration = (
+    registration: Registration
+  ): Effect.Effect<void, LocalDbQueryError> =>
     db.run(
       `
 insert into registrations (
@@ -220,7 +178,9 @@ where excluded.updated_at_ms >= registrations.updated_at_ms
       ]
     ).pipe(Effect.asVoid)
 
-  const upsertAttendance = (attendance: Attendance) =>
+  const upsertAttendance = (
+    attendance: Attendance
+  ): Effect.Effect<void, LocalDbQueryError> =>
     db.run(
       `
 insert into attendance (
@@ -248,7 +208,7 @@ where excluded.updated_at_ms >= attendance.updated_at_ms
       ]
     ).pipe(Effect.asVoid)
 
-  const upsertPhoto = (photo: Photo) =>
+  const upsertPhoto = (photo: Photo): Effect.Effect<void, LocalDbQueryError> =>
     db.run(
       `
 insert into photos (
@@ -274,7 +234,7 @@ where excluded.updated_at_ms >= photos.updated_at_ms
       ]
     ).pipe(Effect.asVoid)
 
-  const applyChanges = (response: SyncResponse) =>
+  const applyChanges = (response: SyncResponse): Effect.Effect<void, LocalDbQueryError> =>
     db.transaction(
       Effect.forEach(response.changes.events, upsertEvent, { concurrency: 1 }).pipe(
         Effect.zipRight(
@@ -299,7 +259,9 @@ where excluded.updated_at_ms >= photos.updated_at_ms
       )
     )
 
-  const decodeOutboxRow = (row: OutboxRow) =>
+  const decodeOutboxRow = (
+    row: OutboxRow
+  ): Effect.Effect<Option.Option<SyncOperation>, LocalDbQueryError> =>
     Effect.gen(function* () {
       const decoded = Schema.decodeUnknownEither(
         Schema.parseJson(SyncOperationSchema)
@@ -317,7 +279,7 @@ where excluded.updated_at_ms >= photos.updated_at_ms
 
   const readOperations = (
     rows: ReadonlyArray<OutboxRow>
-  ) =>
+  ): Effect.Effect<ReadonlyArray<SyncOperation>, LocalDbQueryError> =>
     Effect.forEach(rows, decodeOutboxRow, { concurrency: 1 }).pipe(
       Effect.map((values) =>
         values.flatMap((value) => (Option.isNone(value) ? [] : [value.value]))
@@ -335,30 +297,69 @@ where excluded.updated_at_ms >= photos.updated_at_ms
     const request: SyncRequest =
       cursor === null ? { operations } : { cursorMs: cursor, operations }
 
-    const encodedRequest = yield* Schema.encode(SyncRequestSchema)(request).pipe(
+    const url = `${config.baseUrl}/sync`
+    const httpRequest = yield* HttpClientRequest.schemaBodyJson(SyncRequestSchema)(
+      HttpClientRequest.acceptJson(
+        HttpClientRequest.bearerToken(accessToken)(HttpClientRequest.post(url))
+      ),
+      request
+    ).pipe(
       Effect.mapError(
-        (error) =>
+        (cause) =>
           new ApiAuthError({
             message: "Invalid sync request",
             statusCode: 0,
-            cause: toErrorCause(error),
+            cause,
           })
       )
     )
 
-    const url = `${config.baseUrl}${ApiRoutes.sync.path}`
-    const { status: httpStatus, body } = yield* fetchJson(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(encodedRequest),
+    const response = yield* client.execute(httpRequest).pipe(
+      Effect.mapError(
+        (cause) =>
+          new ApiAuthError({
+            message: "Network error",
+            statusCode: 0,
+            cause,
+          })
+      )
+    )
+
+    const decoded = yield* HttpClientResponse.matchStatus(response, {
+      "2xx": (ok) =>
+        HttpClientResponse.schemaBodyJson(SyncResponseSchema)(ok).pipe(
+          Effect.mapError(
+            (cause) =>
+              new ApiAuthError({
+                message: "Invalid API response",
+                statusCode: ok.status,
+                cause,
+              })
+          )
+        ),
+      orElse: (notOk) =>
+        HttpClientResponse.schemaBodyJson(HttpErrorSchema)(notOk).pipe(
+          Effect.mapError(
+            (cause) =>
+              new ApiAuthError({
+                message: "Invalid error response from API",
+                statusCode: notOk.status,
+                cause,
+              })
+          ),
+          Effect.flatMap((error) =>
+            Effect.fail(
+              new ApiAuthError({
+                message: error.message,
+                statusCode: notOk.status,
+                cause: error.cause,
+              })
+            )
+          )
+        ),
     })
 
-    const response = yield* decodeApiResult(SyncResponseSchema, httpStatus, body)
-    yield* applyChanges(response)
+    yield* applyChanges(decoded)
   })
 
   const refreshStatus = (lastError: string | null): Effect.Effect<SyncStatus, never> =>

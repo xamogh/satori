@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from "react"
 import { Effect } from "effect"
 import { IpcClientService, IpcClientServiceLive } from "../services/IpcClientService"
-import type { AuthSignInRequest, AuthState } from "@satori/shared/ipc/contract"
+import type { AuthSignInRequest, AuthState } from "@satori/ipc-contract/ipc/contract"
 
 export type AuthViewState = { readonly _tag: "Loading" } | AuthState
+
+export type UseAuthResult = {
+  readonly authState: AuthViewState
+  readonly signIn: (request: AuthSignInRequest) => Promise<AuthState>
+  readonly signOut: () => Promise<AuthState>
+  readonly refreshStatus: () => Promise<AuthState>
+}
 
 const loadingState: AuthViewState = { _tag: "Loading" }
 
@@ -15,7 +22,7 @@ const lockFromAuthenticated = (
   email: state.email,
 })
 
-export const useAuth = () => {
+export const useAuth = (): UseAuthResult => {
   const [authState, setAuthState] = useState<AuthViewState>(loadingState)
 
   const refreshStatus = useCallback((): Promise<AuthState> => {

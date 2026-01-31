@@ -1,15 +1,15 @@
 import { app, safeStorage } from "electron"
-import { readFile, writeFile, rm } from "node:fs/promises"
 import { join } from "node:path"
+import { FileSystem, HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform"
 import { Context, Effect, Either, Layer, Option, Schema } from "effect"
+import { AuthSessionSchema, type AuthSession } from "@satori/api-contract/api/auth/auth-model"
+import { BadRequest, InternalServerError, Unauthorized } from "@satori/api-contract/api/http-errors"
 import {
-  ApiResultSchema,
-  ApiRoutes,
-  AuthSessionSchema,
-  type AuthSession,
-} from "@satori/shared/api/contract"
-import type { AuthSignInRequest, AuthState } from "@satori/shared/auth/schemas"
-import { UserRoleSchema } from "@satori/shared/auth/schemas"
+  AuthSignInRequestSchema,
+  UserRoleSchema,
+  type AuthSignInRequest,
+  type AuthState,
+} from "@satori/domain/auth/schemas"
 import {
   AuthStorageError,
   ApiAuthError,
@@ -19,8 +19,6 @@ import {
 } from "../errors"
 import type { ApiConfig } from "../utils/apiConfig"
 import { getApiConfig } from "../utils/apiConfig"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
-import type { Json } from "@satori/shared/utils/json"
 
 const StoredSessionSchema = Schema.Struct({
   accessToken: Schema.String,
@@ -32,135 +30,130 @@ const StoredSessionSchema = Schema.Struct({
 
 type StoredSession = Schema.Schema.Type<typeof StoredSessionSchema>
 
+class SafeStorageEncryptError extends Schema.TaggedError<SafeStorageEncryptError>(
+  "SafeStorageEncryptError"
+)("SafeStorageEncryptError", {
+  cause: Schema.Unknown,
+}) {}
+
+class SafeStorageDecryptError extends Schema.TaggedError<SafeStorageDecryptError>(
+  "SafeStorageDecryptError"
+)("SafeStorageDecryptError", {
+  cause: Schema.Unknown,
+}) {}
 
 const authSessionFilePath = (): string =>
   join(app.getPath("userData"), "auth.session")
 
-const encryptSessionText = (text: string): string => {
-  if (!safeStorage.isEncryptionAvailable()) {
-    return text
-  }
+const encryptSessionText = (text: string): Effect.Effect<string, never> =>
+  !safeStorage.isEncryptionAvailable()
+    ? Effect.succeed(text)
+    : Effect.try({
+        try: () => safeStorage.encryptString(text).toString("base64"),
+        catch: (cause) => new SafeStorageEncryptError({ cause }),
+      }).pipe(
+        Effect.catchTag("SafeStorageEncryptError", () => Effect.succeed(text))
+      )
 
-  return safeStorage.encryptString(text).toString("base64")
-}
+const decryptSessionText = (text: string): Effect.Effect<string, never> =>
+  !safeStorage.isEncryptionAvailable()
+    ? Effect.succeed(text)
+    : Effect.try({
+        try: () => safeStorage.decryptString(Buffer.from(text, "base64")),
+        catch: (cause) => new SafeStorageDecryptError({ cause }),
+      }).pipe(
+        Effect.catchTag("SafeStorageDecryptError", () => Effect.succeed(text))
+      )
 
-const decryptSessionText = (text: string): string => {
-  if (!safeStorage.isEncryptionAvailable()) {
-    return text
-  }
-
-  try {
-    return safeStorage.decryptString(Buffer.from(text, "base64"))
-  } catch {
-    return text
-  }
-}
-
-type NodeError = {
-  readonly code?: string
-}
-
-const isMissingFileError = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  "code" in error &&
-  (error as NodeError).code === "ENOENT"
-
-const loadStoredSession = (): Effect.Effect<
-  Option.Option<StoredSession>,
-  AuthStorageError
-> => {
-  const filePath = authSessionFilePath()
-  const deleteInvalidSession = Effect.tryPromise({
-    try: async () => {
-      await rm(filePath, { force: true })
-    },
-    catch: (error) =>
-      new AuthStorageError({
-        message: "Failed to delete invalid auth session",
-        path: filePath,
-        cause: toErrorCause(error),
-      }),
-  }).pipe(Effect.catchTag("AuthStorageError", () => Effect.succeed(undefined)))
-
-  const program = Effect.tryPromise({
-    try: async () => {
-      try {
-        const encryptedText = await readFile(filePath, { encoding: "utf8" })
-        return Option.some(decryptSessionText(encryptedText))
-      } catch (error) {
-        return isMissingFileError(error) ? Option.none() : Promise.reject(error)
-      }
-    },
-    catch: (error) =>
-      new AuthStorageError({
-        message: "Failed to read auth session",
-        path: filePath,
-        cause: toErrorCause(error),
-      }),
-  })
-
-  return Effect.flatMap(program, (maybeText) =>
-    Option.isNone(maybeText)
-      ? Effect.succeed(Option.none())
-      : Effect.gen(function* () {
-          const parsed = yield* Effect.sync(() => {
-            try {
-              return Option.some(JSON.parse(maybeText.value) as Json)
-            } catch {
-              return Option.none()
-            }
-          })
-
-          if (Option.isNone(parsed)) {
-            yield* deleteInvalidSession
-            return Option.none()
-          }
-
-          const decoded = Schema.decodeUnknownEither(StoredSessionSchema)(parsed.value)
-          if (Either.isLeft(decoded)) {
-            yield* deleteInvalidSession
-            return Option.none()
-          }
-
-          return Option.some(decoded.right)
-        })
+const deleteSessionFileIgnoringErrors = (
+  fs: FileSystem.FileSystem,
+  filePath: string
+): Effect.Effect<void, never> =>
+  fs.remove(filePath, { force: true }).pipe(
+    Effect.catchTag("BadArgument", () => Effect.void),
+    Effect.catchTag("SystemError", () => Effect.void)
   )
+
+const loadStoredSession = (
+  fs: FileSystem.FileSystem
+): Effect.Effect<Option.Option<StoredSession>, AuthStorageError> => {
+  const filePath = authSessionFilePath()
+
+  const decodeStoredSession =
+    Schema.decodeUnknownEither(Schema.parseJson(StoredSessionSchema))
+
+  return fs
+    .readFileString(filePath, "utf8")
+    .pipe(
+      Effect.map(Option.some),
+      Effect.catchTag("SystemError", (error) =>
+        error.reason === "NotFound" ? Effect.succeed(Option.none()) : Effect.fail(error)
+      ),
+      Effect.mapError(
+        (cause) =>
+          new AuthStorageError({
+            message: "Failed to read auth session",
+            path: filePath,
+            cause,
+          })
+      ),
+      Effect.flatMap((encryptedText) =>
+        Option.match(encryptedText, {
+          onNone: () => Effect.succeed(Option.none()),
+          onSome: (text) =>
+            decryptSessionText(text).pipe(
+              Effect.flatMap((decrypted) => {
+                const decoded = decodeStoredSession(decrypted)
+                return Either.isLeft(decoded)
+                  ? deleteSessionFileIgnoringErrors(fs, filePath).pipe(
+                      Effect.as(Option.none())
+                    )
+                  : Effect.succeed(Option.some(decoded.right))
+              })
+            ),
+        })
+      )
+    )
 }
 
 const saveStoredSession = (
+  fs: FileSystem.FileSystem,
   session: StoredSession
 ): Effect.Effect<void, AuthStorageError> => {
   const filePath = authSessionFilePath()
+  return Effect.gen(function* () {
+    const text = JSON.stringify(session)
+    const encrypted = yield* encryptSessionText(text)
 
-  return Effect.tryPromise({
-    try: async () => {
-      const text = JSON.stringify(session)
-      const encrypted = encryptSessionText(text)
-      await writeFile(filePath, encrypted, { encoding: "utf8" })
-    },
-    catch: (error) =>
-      new AuthStorageError({
-        message: "Failed to write auth session",
-        path: filePath,
-        cause: toErrorCause(error),
-      }),
+    yield* fs.writeFileString(filePath, encrypted).pipe(
+      Effect.mapError(
+        (cause) =>
+          new AuthStorageError({
+            message: "Failed to write auth session",
+            path: filePath,
+            cause,
+          })
+      )
+    )
   })
 }
 
-const deleteStoredSession = (): Effect.Effect<void, AuthStorageError> => {
+const deleteStoredSession = (
+  fs: FileSystem.FileSystem
+): Effect.Effect<void, AuthStorageError> => {
   const filePath = authSessionFilePath()
 
-  return Effect.tryPromise({
-    try: async () => {
-      await rm(filePath, { force: true })
-    },
-    catch: (error) =>
-      new AuthStorageError({
-        message: "Failed to delete auth session",
-        path: filePath,
-        cause: toErrorCause(error),
-      }),
+  return Effect.gen(function* () {
+    yield* fs.remove(filePath, { force: true }).pipe(
+      Effect.mapError(
+        (cause) =>
+          new AuthStorageError({
+            message: "Failed to delete auth session",
+            path: filePath,
+            cause,
+          })
+      )
+    )
   })
 }
 
@@ -188,67 +181,74 @@ const authStateFromStoredSession = (
     ? lockStateFromSession(session)
     : authenticatedStateFromSession(session)
 
-const fetchJson = (
-  url: string,
-  init: RequestInit
-): Effect.Effect<
-  { readonly status: number; readonly body: Json },
-  ApiAuthError
-> =>
-  Effect.tryPromise({
-    try: async () => {
-      const response = await fetch(url, init)
-      const body = (await response.json()) as Json
-      return { status: response.status, body }
-    },
-    catch: (error) =>
-      new ApiAuthError({
-        message: "Network error",
-        statusCode: 0,
-        cause: toErrorCause(error),
-      }),
-  })
+const HttpErrorSchema = Schema.Union(Unauthorized, BadRequest, InternalServerError)
 
 const authSignInRequest = (
+  client: HttpClient.HttpClient,
   config: ApiConfig,
   request: AuthSignInRequest
 ): Effect.Effect<AuthSession, ApiAuthError> =>
   Effect.gen(function* () {
-    const url = `${config.baseUrl}${ApiRoutes.authSignIn.path}`
+    const url = `${config.baseUrl}/auth/sign-in`
 
-    const { status, body } = yield* fetchJson(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(request),
-    })
-
-    const decoded = yield* Schema.decodeUnknown(
-      ApiResultSchema(AuthSessionSchema)
-    )(body).pipe(
+    const httpRequest = yield* HttpClientRequest.schemaBodyJson(AuthSignInRequestSchema)(
+      HttpClientRequest.acceptJson(HttpClientRequest.post(url)),
+      request
+    ).pipe(
       Effect.mapError(
-        (error) =>
+        (cause) =>
           new ApiAuthError({
-            message: "Invalid auth response from API",
-            statusCode: status,
-            cause: toErrorCause(error),
+            message: "Invalid sign-in request",
+            statusCode: 0,
+            cause,
           })
       )
     )
 
-    if (decoded._tag === "Ok") {
-      return decoded.value
-    }
-
-    return yield* Effect.fail(
-      new ApiAuthError({
-        message: decoded.error.message,
-        statusCode: status,
-        cause: toErrorCause(decoded.error),
-      })
+    const response = yield* client.execute(httpRequest).pipe(
+      Effect.mapError(
+        (cause) =>
+          new ApiAuthError({
+            message: "Network error",
+            statusCode: 0,
+            cause,
+          })
+      )
     )
+
+    return yield* HttpClientResponse.matchStatus(response, {
+      "2xx": (ok) =>
+        HttpClientResponse.schemaBodyJson(AuthSessionSchema)(ok).pipe(
+          Effect.mapError(
+            (cause) =>
+              new ApiAuthError({
+                message: "Invalid auth response from API",
+                statusCode: ok.status,
+                cause,
+              })
+          )
+        ),
+      orElse: (notOk) =>
+        HttpClientResponse.schemaBodyJson(HttpErrorSchema)(notOk).pipe(
+          Effect.mapError(
+            (cause) =>
+              new ApiAuthError({
+                message: "Invalid error response from API",
+                statusCode: notOk.status,
+                cause,
+              })
+          ),
+          Effect.flatMap((httpError) =>
+            Effect.fail(
+              new ApiAuthError({
+                message: httpError.message,
+                statusCode: notOk.status,
+                cause: httpError.cause,
+              })
+            )
+          )
+        ),
+    })
   })
 
 export class AuthService extends Context.Tag("AuthService")<
@@ -274,7 +274,10 @@ export class AuthService extends Context.Tag("AuthService")<
 >() {}
 
 const makeAuthService = Effect.gen(function* () {
-  const initialStoredSession = yield* loadStoredSession()
+  const fs = yield* FileSystem.FileSystem
+  const client = yield* HttpClient.HttpClient
+
+  const initialStoredSession = yield* loadStoredSession(fs)
   let currentStoredSession = initialStoredSession
 
   let currentAuthState = Option.isNone(initialStoredSession)
@@ -311,7 +314,7 @@ const makeAuthService = Effect.gen(function* () {
   scheduleLock(currentAuthState)
 
   const setStoredSession = (session: StoredSession): Effect.Effect<void, AuthStorageError> =>
-    Effect.tap(saveStoredSession(session), () =>
+    Effect.tap(saveStoredSession(fs, session), () =>
       Effect.sync(() => {
         currentStoredSession = Option.some(session)
         currentAuthState = authenticatedStateFromSession(session)
@@ -320,7 +323,7 @@ const makeAuthService = Effect.gen(function* () {
     )
 
   const clearStoredSession: Effect.Effect<void, AuthStorageError> = Effect.tap(
-    deleteStoredSession(),
+    deleteStoredSession(fs),
     () =>
       Effect.sync(() => {
         currentStoredSession = Option.none()
@@ -392,7 +395,7 @@ const makeAuthService = Effect.gen(function* () {
   > =>
     Effect.gen(function* () {
       const config = yield* getApiConfig()
-      const session = yield* authSignInRequest(config, request)
+      const session = yield* authSignInRequest(client, config, request)
 
       const storedSession: StoredSession = session
 

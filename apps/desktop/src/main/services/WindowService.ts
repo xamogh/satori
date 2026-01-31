@@ -8,7 +8,6 @@ import {
   DEFAULT_WINDOW_HEIGHT,
 } from "../constants/window"
 import { WindowCreationError, FileLoadError } from "../errors"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
 
 export class WindowService extends Context.Tag("WindowService")<
   WindowService,
@@ -68,7 +67,7 @@ const loadWindowContent = (
           new FileLoadError({
             message: "Failed to load development URL",
             path: process.env["ELECTRON_RENDERER_URL"]!,
-            cause: toErrorCause(error),
+            cause: error,
           }),
       })
     } else {
@@ -79,7 +78,7 @@ const loadWindowContent = (
           new FileLoadError({
             message: "Failed to load production file",
             path: filePath,
-            cause: toErrorCause(error),
+            cause: error,
           }),
       })
     }

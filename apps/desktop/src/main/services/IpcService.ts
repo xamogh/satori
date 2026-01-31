@@ -5,9 +5,8 @@ import {
   IpcRoutes,
   makeErr,
   makeOk,
-} from "@satori/shared/ipc/contract"
-import { formatParseIssues } from "@satori/shared/utils/parseIssue"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+} from "@satori/ipc-contract/ipc/contract"
+import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
 import { AuthService } from "./AuthService"
 import { DataService } from "./DataService"
 import { SyncService } from "./SyncService"
@@ -118,7 +117,7 @@ const registerHandler = <
       new IpcError({
         message: "Failed to register IPC handler",
         channel: route.channel,
-        cause: toErrorCause(error),
+        cause: error,
       }),
   })
 

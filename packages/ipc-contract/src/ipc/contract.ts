@@ -7,42 +7,42 @@ import {
   type AuthSignInRequest,
   type AuthState,
   type UserRole,
-} from "../auth/schemas"
+} from "@satori/domain/auth/schemas"
 import {
   EventCreateInputSchema,
   EventDeleteInputSchema,
   EventListQuerySchema,
   EventSchema,
   EventUpdateInputSchema,
-} from "../domain/event"
+} from "@satori/domain/domain/event"
 import {
   PersonCreateInputSchema,
   PersonDeleteInputSchema,
   PersonListQuerySchema,
   PersonSchema,
   PersonUpdateInputSchema,
-} from "../domain/person"
+} from "@satori/domain/domain/person"
 import {
   RegistrationCreateInputSchema,
   RegistrationDeleteInputSchema,
   RegistrationListQuerySchema,
   RegistrationSchema,
   RegistrationUpdateInputSchema,
-} from "../domain/registration"
+} from "@satori/domain/domain/registration"
 import {
   AttendanceCreateInputSchema,
   AttendanceDeleteInputSchema,
   AttendanceListQuerySchema,
   AttendanceSchema,
   AttendanceUpdateInputSchema,
-} from "../domain/attendance"
+} from "@satori/domain/domain/attendance"
 import {
   PhotoCreateInputSchema,
   PhotoDeleteInputSchema,
   PhotoSchema,
-} from "../domain/photo"
-import { EntityIdSchema } from "../domain/common"
-import { SyncStatusSchema } from "../sync/schemas"
+} from "@satori/domain/domain/photo"
+import { EntityIdSchema } from "@satori/domain/domain/common"
+import { SyncStatusSchema } from "@satori/domain/sync/schemas"
 
 export const IpcChannel = {
   ping: "satori-desktop:ping",

@@ -2,20 +2,26 @@ import { resolve } from 'path'
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 
-const sharedSrc = resolve('../../packages/shared/src')
+const domainSrc = resolve('../../packages/domain/src')
+const apiContractSrc = resolve('../../packages/api-contract/src')
+const ipcContractSrc = resolve('../../packages/ipc-contract/src')
 
 export default defineConfig({
   main: {
     resolve: {
       alias: {
-        '@satori/shared': sharedSrc
+        '@satori/domain': domainSrc,
+        '@satori/api-contract': apiContractSrc,
+        '@satori/ipc-contract': ipcContractSrc
       }
     }
   },
   preload: {
     resolve: {
       alias: {
-        '@satori/shared': sharedSrc
+        '@satori/domain': domainSrc,
+        '@satori/api-contract': apiContractSrc,
+        '@satori/ipc-contract': ipcContractSrc
       }
     }
   },
@@ -23,7 +29,9 @@ export default defineConfig({
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src'),
-        '@satori/shared': sharedSrc
+        '@satori/domain': domainSrc,
+        '@satori/api-contract': apiContractSrc,
+        '@satori/ipc-contract': ipcContractSrc
       }
     },
     server: {

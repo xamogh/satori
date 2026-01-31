@@ -1,10 +1,9 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react"
 import { Either, Schema } from "effect"
 import { PeoplePage } from "../components/pages/PeoplePage"
-import { PersonCreateInputSchema, type Person } from "@satori/shared/domain/person"
-import type { SchemaIssue } from "@satori/shared/ipc/contract"
-import { formatParseIssues } from "@satori/shared/utils/parseIssue"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+import { PersonCreateInputSchema, type Person } from "@satori/domain/domain/person"
+import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
+import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
 import { createStore } from "../utils/store"
 
 const normalizeQuery = (raw: string): string | undefined => {
@@ -74,7 +73,7 @@ const refreshPeopleList = (query: string | undefined): Promise<void> => {
       peopleListStore.updateSnapshot((current) => ({
         ...current,
         loading: false,
-        error: toErrorCause(reason).message,
+        error: reason instanceof Error ? reason.message : String(reason),
       }))
     }
   )
@@ -159,7 +158,7 @@ export const PeopleContainer = (): React.JSX.Element => {
 
         setCreateError(result.error.message)
       },
-      (reason) => setCreateError(toErrorCause(reason).message)
+      (reason) => setCreateError(reason instanceof Error ? reason.message : String(reason))
     )
   }, [createDisplayName, createEmail, createPhone, refresh])
 
@@ -180,7 +179,7 @@ export const PeopleContainer = (): React.JSX.Element => {
         (reason) =>
           peopleListStore.updateSnapshot((current) => ({
             ...current,
-            error: toErrorCause(reason).message,
+            error: reason instanceof Error ? reason.message : String(reason),
           }))
       )
     },
@@ -215,7 +214,7 @@ export const PeopleContainer = (): React.JSX.Element => {
           return url
         })
       },
-      (reason) => setPhotoError(toErrorCause(reason).message)
+      (reason) => setPhotoError(reason instanceof Error ? reason.message : String(reason))
     )
   }, [])
 
@@ -246,7 +245,7 @@ export const PeopleContainer = (): React.JSX.Element => {
           (reason) =>
             peopleListStore.updateSnapshot((current) => ({
               ...current,
-              error: toErrorCause(reason).message,
+              error: reason instanceof Error ? reason.message : String(reason),
             }))
         )
     },

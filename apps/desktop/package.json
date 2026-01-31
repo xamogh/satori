@@ -8,9 +8,9 @@
   "scripts": {
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
-    "typecheck": "pnpm -C ../../packages/shared build && pnpm -s typecheck:node && pnpm -s typecheck:web",
-    "start": "pnpm -C ../../packages/shared build && node --env-file-if-exists ../../.env node_modules/electron-vite/bin/electron-vite.js preview",
-    "dev": "pnpm -C ../../packages/shared build && node --env-file-if-exists ../../.env node_modules/electron-vite/bin/electron-vite.js dev",
+    "typecheck": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && pnpm -C ../../packages/ipc-contract build && pnpm -s typecheck:node && pnpm -s typecheck:web",
+    "start": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && pnpm -C ../../packages/ipc-contract build && node --env-file-if-exists ../../.env node_modules/electron-vite/bin/electron-vite.js preview",
+    "dev": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && pnpm -C ../../packages/ipc-contract build && node --env-file-if-exists ../../.env node_modules/electron-vite/bin/electron-vite.js dev",
     "build": "pnpm -s typecheck && electron-vite build",
     "rebuild:native": "electron-builder install-app-deps",
     "postinstall": "electron-builder install-app-deps",
@@ -20,7 +20,11 @@
     "build:linux": "pnpm -s build && electron-builder --linux"
   },
   "dependencies": {
-    "@satori/shared": "workspace:*",
+    "@effect/platform": "0.93.6",
+    "@effect/platform-node": "0.103.0",
+    "@satori/api-contract": "workspace:*",
+    "@satori/domain": "workspace:*",
+    "@satori/ipc-contract": "workspace:*",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@radix-ui/react-avatar": "^1.1.10",

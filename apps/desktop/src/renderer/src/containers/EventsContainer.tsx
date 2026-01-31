@@ -1,10 +1,9 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react"
 import { Either, Schema } from "effect"
 import { EventsPage } from "../components/pages/EventsPage"
-import { EventCreateInputSchema, type Event } from "@satori/shared/domain/event"
-import { formatParseIssues } from "@satori/shared/utils/parseIssue"
-import type { SchemaIssue } from "@satori/shared/ipc/contract"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+import { EventCreateInputSchema, type Event } from "@satori/domain/domain/event"
+import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
+import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
 import { createStore } from "../utils/store"
 
 const normalizeQuery = (raw: string): string | undefined => {
@@ -76,7 +75,7 @@ const refreshEventsList = (query: string | undefined): Promise<void> => {
       eventsListStore.updateSnapshot((current) => ({
         ...current,
         loading: false,
-        error: toErrorCause(reason).message,
+        error: reason instanceof Error ? reason.message : String(reason),
       }))
     }
   )
@@ -163,7 +162,7 @@ export const EventsContainer = (): React.JSX.Element => {
 
         setCreateError(result.error.message)
       },
-      (reason) => setCreateError(toErrorCause(reason).message)
+      (reason) => setCreateError(reason instanceof Error ? reason.message : String(reason))
     )
   }, [createDescription, createEndsAt, createStartsAt, createTitle, refresh])
 
@@ -183,7 +182,7 @@ export const EventsContainer = (): React.JSX.Element => {
         (reason) =>
           eventsListStore.updateSnapshot((current) => ({
             ...current,
-            error: toErrorCause(reason).message,
+            error: reason instanceof Error ? reason.message : String(reason),
           }))
       )
     },

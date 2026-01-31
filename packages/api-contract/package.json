@@ -1,0 +1,39 @@
+{
+  "name": "@satori/api-contract",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform": "0.93.6",
+    "@satori/domain": "workspace:*",
+    "effect": "^3.19.15"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "exports": {
+    "./api/api-definition": {
+      "types": "./dist/api/api-definition.d.ts",
+      "default": "./dist/api/api-definition.js"
+    },
+    "./api/http-errors": {
+      "types": "./dist/api/http-errors.d.ts",
+      "default": "./dist/api/http-errors.js"
+    },
+    "./api/auth/auth-context": {
+      "types": "./dist/api/auth/auth-context.d.ts",
+      "default": "./dist/api/auth/auth-context.js"
+    },
+    "./api/auth/auth-model": {
+      "types": "./dist/api/auth/auth-model.d.ts",
+      "default": "./dist/api/auth/auth-model.js"
+    },
+    "./api/auth/bearer-auth.middleware": {
+      "types": "./dist/api/auth/bearer-auth.middleware.d.ts",
+      "default": "./dist/api/auth/bearer-auth.middleware.js"
+    }
+  }
+}

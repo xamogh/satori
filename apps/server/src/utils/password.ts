@@ -1,7 +1,6 @@
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto"
 import { Effect } from "effect"
 import { PasswordHashError, PasswordVerifyError } from "../errors"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
 
 type ScryptParams = {
   readonly cost: number
@@ -70,7 +69,7 @@ export const hashPassword = (
     catch: (error) =>
       new PasswordHashError({
         message: "Failed to hash password",
-        cause: toErrorCause(error),
+        cause: error,
       }),
   })
 
@@ -90,7 +89,7 @@ const parseHash = (
       return Effect.fail(
         new PasswordVerifyError({
           message: "Invalid stored password hash",
-          cause: toErrorCause("Invalid hash format"),
+          cause: "Invalid hash format",
         })
       )
     }
@@ -100,7 +99,7 @@ const parseHash = (
       return Effect.fail(
         new PasswordVerifyError({
           message: "Invalid stored password hash",
-          cause: toErrorCause("Unsupported password hash algorithm"),
+          cause: "Unsupported password hash algorithm",
         })
       )
     }
@@ -119,7 +118,7 @@ const parseHash = (
       return Effect.fail(
         new PasswordVerifyError({
           message: "Invalid stored password hash",
-          cause: toErrorCause("Invalid scrypt params"),
+          cause: "Invalid scrypt params",
         })
       )
     }
@@ -144,7 +143,7 @@ export const verifyPassword = (
       catch: (error) =>
         new PasswordVerifyError({
           message: "Failed to verify password",
-          cause: toErrorCause(error),
+          cause: error,
         }),
     })
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Either, Schema } from "effect"
-import { Button, buttonVariants } from "../components/ui/button"
+import { Button } from "../components/ui/button"
+import { buttonVariants } from "../components/ui/button-variants"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import {
   Dialog,
@@ -17,10 +18,9 @@ import { SchemaIssueList } from "../components/SchemaIssueList"
 import {
   PersonCreateInputSchema,
   type Person,
-} from "@satori/shared/domain/person"
-import { formatParseIssues } from "@satori/shared/utils/parseIssue"
-import type { SchemaIssue } from "@satori/shared/ipc/contract"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+} from "@satori/domain/domain/person"
+import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
+import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
 
 const normalizeQuery = (raw: string): string | undefined => {
   const trimmed = raw.trim()
@@ -35,7 +35,7 @@ const fileToBytes = async (file: File): Promise<Uint8Array> => {
 const mimeTypeOrDefault = (file: File): string =>
   file.type.trim().length > 0 ? file.type : "application/octet-stream"
 
-export const PeopleView = () => {
+export const PeopleView = (): React.JSX.Element => {
   const [query, setQuery] = useState("")
   const normalizedQuery = useMemo(() => normalizeQuery(query), [query])
 
@@ -80,13 +80,16 @@ export const PeopleView = () => {
 
           setError(result.error.message)
         },
-        (reason) => setError(toErrorCause(reason).message)
+        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
       )
       .finally(() => setLoading(false))
   }, [normalizedQuery])
 
   useEffect(() => {
-    refresh()
+    const id = window.setTimeout(() => {
+      refresh()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [refresh])
 
   const submitCreate = useCallback((): void => {
@@ -117,7 +120,7 @@ export const PeopleView = () => {
 
         setCreateError(result.error.message)
       },
-      (reason) => setCreateError(toErrorCause(reason).message)
+      (reason) => setCreateError(reason instanceof Error ? reason.message : String(reason))
     )
   }, [createDisplayName, createEmail, createPhone, refresh])
 
@@ -132,7 +135,7 @@ export const PeopleView = () => {
           }
           setError(result.error.message)
         },
-        (reason) => setError(toErrorCause(reason).message)
+        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
       )
     },
     [refresh]
@@ -161,7 +164,7 @@ export const PeopleView = () => {
             return url
           })
         },
-        (reason) => setPhotoError(toErrorCause(reason).message)
+        (reason) => setPhotoError(reason instanceof Error ? reason.message : String(reason))
       )
     },
     []
@@ -301,7 +304,7 @@ export const PeopleView = () => {
                           event.currentTarget.value = ""
                           if (!file) return
                           uploadPhotoForPerson(person.id, file).catch((reason) =>
-                            setError(toErrorCause(reason).message)
+                            setError(reason instanceof Error ? reason.message : String(reason))
                           )
                         }}
                       />

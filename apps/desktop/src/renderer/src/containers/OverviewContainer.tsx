@@ -1,6 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react"
 import { OverviewPage, type OverviewStats } from "../components/pages/OverviewPage"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
 import { createStore } from "../utils/store"
 
 type OverviewState = {
@@ -80,7 +79,7 @@ const refreshOverview = (): Promise<void> => {
         overviewStore.updateSnapshot((current) => ({
           ...current,
           loading: false,
-          error: toErrorCause(reason).message,
+          error: reason instanceof Error ? reason.message : String(reason),
         }))
       }
     )

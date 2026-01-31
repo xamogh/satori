@@ -2,12 +2,11 @@ import { useCallback, useEffect, useState } from "react"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { formatDateTime } from "../utils/date"
-import type { SyncStatus } from "@satori/shared/sync/schemas"
-import { toErrorCause } from "@satori/shared/utils/errorCause"
+import type { SyncStatus } from "@satori/domain/sync/schemas"
 
 const formatMaybeTime = (ms: number | null): string => (ms === null ? "—" : formatDateTime(ms))
 
-export const SyncView = () => {
+export const SyncView = (): React.JSX.Element => {
   const [status, setStatus] = useState<SyncStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -25,13 +24,16 @@ export const SyncView = () => {
           }
           setError(result.error.message)
         },
-        (reason) => setError(toErrorCause(reason).message)
+        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
       )
       .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
-    refresh()
+    const id = window.setTimeout(() => {
+      refresh()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [refresh])
 
   const runSyncNow = useCallback((): void => {
@@ -47,7 +49,7 @@ export const SyncView = () => {
           }
           setError(result.error.message)
         },
-        (reason) => setError(toErrorCause(reason).message)
+        (reason) => setError(reason instanceof Error ? reason.message : String(reason))
       )
       .finally(() => setLoading(false))
   }, [])

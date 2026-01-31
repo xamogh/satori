@@ -1,5 +1,5 @@
-import type { Event } from "@satori/shared/domain/event"
-import type { SchemaIssue } from "@satori/shared/ipc/contract"
+import type { Event } from "@satori/domain/domain/event"
+import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
 import { Button } from "../ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import {
@@ -190,4 +190,3 @@ export const EventsPage = ({
     </Card>
   </div>
 )
-
