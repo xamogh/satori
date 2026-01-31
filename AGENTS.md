@@ -84,6 +84,10 @@ export class MyError extends Schema.TaggedError<MyError>("MyError")("MyError", {
 - Big review: `git --no-pager diff --color=never`.
 - Multi-agent: check `git status/diff` before edits; ship small commits.
 
+### Atomic Commits
+- Prefer atomic commits: one logical change per commit; avoid mixing unrelated refactors/features/fixes.
+- Before committing, verify `pnpm typecheck`, `pnpm build`, and `pnpm lint` (and any relevant tests) all pass.
+
 ### Commit Messages
 - Use Conventional Commits (`fix:`, `feat:`, `chore:`, `refactor:`, `fix(ci):`, etc.)
 - Subject line: short, user-facing impact (not implementation detail)
