@@ -26,17 +26,19 @@ import { Badge } from "../ui/badge"
 
 export type EventsCreateFormState = {
   readonly open: boolean
-  readonly title: string
+  readonly name: string
   readonly description: string
   readonly startsAt: string
   readonly endsAt: string
+  readonly registrationMode: "PRE_REGISTRATION" | "WALK_IN"
   readonly issues: ReadonlyArray<SchemaIssue>
   readonly error: string | null
   readonly onOpenChange: (open: boolean) => void
-  readonly onTitleChange: (value: string) => void
+  readonly onNameChange: (value: string) => void
   readonly onDescriptionChange: (value: string) => void
   readonly onStartsAtChange: (value: string) => void
   readonly onEndsAtChange: (value: string) => void
+  readonly onRegistrationModeChange: (value: "PRE_REGISTRATION" | "WALK_IN") => void
   readonly onCancel: () => void
   readonly onSubmit: () => void
 }
@@ -57,15 +59,17 @@ export type EventsPageProps = {
   readonly create: EventsCreateFormState
 }
 
-const getEventStatus = (event: Event): { label: string; variant: "default" | "secondary" | "outline" } => {
-  const now = Date.now()
-  if (event.endsAtMs && event.endsAtMs < now) {
-    return { label: "Past", variant: "secondary" }
+const getEventStatus = (
+  event: Event
+): { label: string; variant: "default" | "secondary" | "outline" } => {
+  switch (event.status) {
+    case "ACTIVE":
+      return { label: "Active", variant: "default" }
+    case "CLOSED":
+      return { label: "Closed", variant: "secondary" }
+    case "DRAFT":
+      return { label: "Draft", variant: "outline" }
   }
-  if (event.startsAtMs <= now) {
-    return { label: "Ongoing", variant: "default" }
-  }
-  return { label: "Upcoming", variant: "outline" }
 }
 
 const eventsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableColumn<Event>> => [
@@ -78,7 +82,7 @@ const eventsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableC
           <CalendarDays className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="truncate font-medium">{event.title}</p>
+          <p className="truncate font-medium">{event.name}</p>
           {event.description ? (
             <p className="truncate text-sm text-muted-foreground">{event.description}</p>
           ) : null}
@@ -171,11 +175,11 @@ export const EventsPage = ({
 
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="event-title">Title</Label>
+                <Label htmlFor="event-name">Name</Label>
                 <Input
-                  id="event-title"
-                  value={create.title}
-                  onChange={(event) => create.onTitleChange(event.target.value)}
+                  id="event-name"
+                  value={create.name}
+                  onChange={(event) => create.onNameChange(event.target.value)}
                   placeholder="Sunday service"
                 />
               </div>
@@ -189,6 +193,23 @@ export const EventsPage = ({
                   placeholder="Optional notes about the event"
                   rows={3}
                 />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="event-registration-mode">Registration mode</Label>
+                <select
+                  id="event-registration-mode"
+                  value={create.registrationMode}
+                  onChange={(event) =>
+                    create.onRegistrationModeChange(
+                      event.target.value === "WALK_IN" ? "WALK_IN" : "PRE_REGISTRATION"
+                    )
+                  }
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="PRE_REGISTRATION">Pre-registration</option>
+                  <option value="WALK_IN">Walk-in</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

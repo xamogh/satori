@@ -165,7 +165,7 @@ export const OverviewPage = ({
                         <CalendarDays className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium">{event.title}</p>
+                        <p className="truncate font-medium">{event.name}</p>
                         <p className="text-sm text-muted-foreground">
                           {formatDateTime(event.startsAtMs)}
                         </p>

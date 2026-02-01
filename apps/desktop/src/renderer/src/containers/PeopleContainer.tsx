@@ -113,9 +113,12 @@ export const PeopleContainer = (): React.JSX.Element => {
   )
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [createDisplayName, setCreateDisplayName] = useState("")
+  const [createFirstName, setCreateFirstName] = useState("")
+  const [createMiddleName, setCreateMiddleName] = useState("")
+  const [createLastName, setCreateLastName] = useState("")
   const [createEmail, setCreateEmail] = useState("")
-  const [createPhone, setCreatePhone] = useState("")
+  const [createPhone1, setCreatePhone1] = useState("")
+  const [createPhone2, setCreatePhone2] = useState("")
   const [createIssues, setCreateIssues] = useState<ReadonlyArray<SchemaIssue>>([])
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -149,9 +152,31 @@ export const PeopleContainer = (): React.JSX.Element => {
     setCreateError(null)
 
     const decoded = Schema.decodeUnknownEither(PersonCreateInputSchema)({
-      displayName: createDisplayName,
+      firstName: createFirstName,
+      middleName: createMiddleName.trim().length === 0 ? null : createMiddleName,
+      lastName: createLastName,
+      gender: null,
+      yearOfBirth: null,
       email: createEmail.trim().length === 0 ? null : createEmail,
-      phone: createPhone.trim().length === 0 ? null : createPhone,
+      phone1: createPhone1.trim().length === 0 ? null : createPhone1,
+      phone2: createPhone2.trim().length === 0 ? null : createPhone2,
+      address: null,
+      country: null,
+      nationality: null,
+      languagePreference: null,
+      notes: null,
+      personCode: null,
+      referredBy: null,
+      occupation: null,
+      personType: null,
+      title: null,
+      refugeName: null,
+      yearOfRefuge: null,
+      yearOfRefugeCalendarType: null,
+      isSanghaMember: false,
+      centerId: null,
+      isKramaInstructor: false,
+      kramaInstructorPersonId: null,
     })
 
     if (Either.isLeft(decoded)) {
@@ -164,9 +189,12 @@ export const PeopleContainer = (): React.JSX.Element => {
       (result) => {
         if (result._tag === "Ok") {
           setCreateOpen(false)
-          setCreateDisplayName("")
+          setCreateFirstName("")
+          setCreateMiddleName("")
+          setCreateLastName("")
           setCreateEmail("")
-          setCreatePhone("")
+          setCreatePhone1("")
+          setCreatePhone2("")
           refresh()
           return
         }
@@ -175,7 +203,15 @@ export const PeopleContainer = (): React.JSX.Element => {
       },
       (reason) => setCreateError(String(reason))
     )
-  }, [createDisplayName, createEmail, createPhone, refresh])
+  }, [
+    createFirstName,
+    createMiddleName,
+    createLastName,
+    createEmail,
+    createPhone1,
+    createPhone2,
+    refresh,
+  ])
 
   const deletePerson = useCallback(
     (id: string): void => {
@@ -291,9 +327,12 @@ export const PeopleContainer = (): React.JSX.Element => {
       onUploadPhoto={uploadPhotoForPerson}
       create={{
         open: createOpen,
-        displayName: createDisplayName,
+        firstName: createFirstName,
+        middleName: createMiddleName,
+        lastName: createLastName,
         email: createEmail,
-        phone: createPhone,
+        phone1: createPhone1,
+        phone2: createPhone2,
         issues: createIssues,
         error: createError,
         onOpenChange: (open) => {
@@ -303,9 +342,12 @@ export const PeopleContainer = (): React.JSX.Element => {
             setCreateError(null)
           }
         },
-        onDisplayNameChange: setCreateDisplayName,
+        onFirstNameChange: setCreateFirstName,
+        onMiddleNameChange: setCreateMiddleName,
+        onLastNameChange: setCreateLastName,
         onEmailChange: setCreateEmail,
-        onPhoneChange: setCreatePhone,
+        onPhone1Change: setCreatePhone1,
+        onPhone2Change: setCreatePhone2,
         onCancel: cancelCreate,
         onSubmit: submitCreate,
       }}

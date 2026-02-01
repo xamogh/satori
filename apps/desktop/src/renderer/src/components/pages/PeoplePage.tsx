@@ -26,15 +26,21 @@ import { Avatar, AvatarFallback } from "../ui/avatar"
 
 export type PeopleCreateFormState = {
   readonly open: boolean
-  readonly displayName: string
+  readonly firstName: string
+  readonly middleName: string
+  readonly lastName: string
   readonly email: string
-  readonly phone: string
+  readonly phone1: string
+  readonly phone2: string
   readonly issues: ReadonlyArray<SchemaIssue>
   readonly error: string | null
   readonly onOpenChange: (open: boolean) => void
-  readonly onDisplayNameChange: (value: string) => void
+  readonly onFirstNameChange: (value: string) => void
+  readonly onMiddleNameChange: (value: string) => void
+  readonly onLastNameChange: (value: string) => void
   readonly onEmailChange: (value: string) => void
-  readonly onPhoneChange: (value: string) => void
+  readonly onPhone1Change: (value: string) => void
+  readonly onPhone2Change: (value: string) => void
   readonly onCancel: () => void
   readonly onSubmit: () => void
 }
@@ -73,6 +79,11 @@ const getInitials = (name: string): string => {
   return name.slice(0, 2).toUpperCase()
 }
 
+const getFullName = (person: Person): string =>
+  [person.firstName, person.middleName, person.lastName]
+    .filter((value): value is string => typeof value === "string" && value.length > 0)
+    .join(" ")
+
 const peopleColumns = (
   onDeletePerson: (id: string) => void,
   onViewPhoto: (photoId: string) => void,
@@ -85,11 +96,11 @@ const peopleColumns = (
       <div className="flex items-center gap-3">
         <Avatar className="h-10 w-10">
           <AvatarFallback className="bg-primary/10 text-primary font-medium">
-            {getInitials(person.displayName)}
+            {getInitials(getFullName(person))}
           </AvatarFallback>
         </Avatar>
         <div className="min-w-0">
-          <p className="truncate font-medium">{person.displayName}</p>
+          <p className="truncate font-medium">{getFullName(person)}</p>
           {person.email ? (
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Mail className="h-3 w-3" />
@@ -105,10 +116,16 @@ const peopleColumns = (
     header: "Contact",
     cell: (person) => (
       <div className="space-y-1 text-sm">
-        {person.phone ? (
+        {person.phone1 ? (
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Phone className="h-3.5 w-3.5" />
-            <span>{person.phone}</span>
+            <span>{person.phone1}</span>
+          </div>
+        ) : null}
+        {person.phone2 ? (
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Phone className="h-3.5 w-3.5" />
+            <span>{person.phone2}</span>
           </div>
         ) : null}
         {person.photoId ? (
@@ -117,7 +134,7 @@ const peopleColumns = (
             <span>Has photo</span>
           </div>
         ) : null}
-        {!person.phone && !person.photoId ? (
+        {!person.phone1 && !person.phone2 && !person.photoId ? (
           <span className="text-muted-foreground">No contact info</span>
         ) : null}
       </div>
@@ -161,7 +178,7 @@ export const PeoplePage = ({
     <PageHeader
       icon={<Users className="h-5 w-5" />}
       title="People"
-      description="Directory for registrations and attendance tracking."
+      description="Directory for people and attendance tracking."
       badge={
         peopleTotal > 0 ? (
           <Badge variant="secondary">{peopleTotal} total</Badge>
@@ -185,12 +202,32 @@ export const PeoplePage = ({
 
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="person-name">Display name</Label>
+                <Label htmlFor="person-first-name">First name</Label>
                 <Input
-                  id="person-name"
-                  value={create.displayName}
-                  onChange={(event) => create.onDisplayNameChange(event.target.value)}
-                  placeholder="Jane Doe"
+                  id="person-first-name"
+                  value={create.firstName}
+                  onChange={(event) => create.onFirstNameChange(event.target.value)}
+                  placeholder="Jane"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="person-middle-name">Middle name</Label>
+                <Input
+                  id="person-middle-name"
+                  value={create.middleName}
+                  onChange={(event) => create.onMiddleNameChange(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="person-last-name">Last name</Label>
+                <Input
+                  id="person-last-name"
+                  value={create.lastName}
+                  onChange={(event) => create.onLastNameChange(event.target.value)}
+                  placeholder="Doe"
                 />
               </div>
 
@@ -206,13 +243,24 @@ export const PeoplePage = ({
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="person-phone">Phone (optional)</Label>
+                <Label htmlFor="person-phone1">Phone 1 (optional)</Label>
                 <Input
-                  id="person-phone"
+                  id="person-phone1"
                   type="tel"
-                  value={create.phone}
-                  onChange={(event) => create.onPhoneChange(event.target.value)}
+                  value={create.phone1}
+                  onChange={(event) => create.onPhone1Change(event.target.value)}
                   placeholder="+1 (555) 555-5555"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="person-phone2">Phone 2 (optional)</Label>
+                <Input
+                  id="person-phone2"
+                  type="tel"
+                  value={create.phone2}
+                  onChange={(event) => create.onPhone2Change(event.target.value)}
+                  placeholder="+1 (555) 555-0000"
                 />
               </div>
 

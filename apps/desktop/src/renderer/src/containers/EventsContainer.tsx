@@ -115,10 +115,13 @@ export const EventsContainer = (): React.JSX.Element => {
   )
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [createTitle, setCreateTitle] = useState("")
+  const [createName, setCreateName] = useState("")
   const [createDescription, setCreateDescription] = useState("")
   const [createStartsAt, setCreateStartsAt] = useState("")
   const [createEndsAt, setCreateEndsAt] = useState("")
+  const [createRegistrationMode, setCreateRegistrationMode] = useState<
+    "PRE_REGISTRATION" | "WALK_IN"
+  >("PRE_REGISTRATION")
   const [createIssues, setCreateIssues] = useState<ReadonlyArray<SchemaIssue>>([])
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -151,10 +154,15 @@ export const EventsContainer = (): React.JSX.Element => {
     }
 
     const decoded = Schema.decodeUnknownEither(EventCreateInputSchema)({
-      title: createTitle,
+      parentEventId: null,
+      name: createName,
       description: createDescription.trim().length === 0 ? null : createDescription,
+      registrationMode: createRegistrationMode,
+      status: "DRAFT",
       startsAtMs,
       endsAtMs,
+      empowermentId: null,
+      guruId: null,
     })
 
     if (Either.isLeft(decoded)) {
@@ -167,10 +175,11 @@ export const EventsContainer = (): React.JSX.Element => {
       (result) => {
         if (result._tag === "Ok") {
           setCreateOpen(false)
-          setCreateTitle("")
+          setCreateName("")
           setCreateDescription("")
           setCreateStartsAt("")
           setCreateEndsAt("")
+          setCreateRegistrationMode("PRE_REGISTRATION")
           refresh()
           return
         }
@@ -179,7 +188,14 @@ export const EventsContainer = (): React.JSX.Element => {
       },
       (reason) => setCreateError(String(reason))
     )
-  }, [createDescription, createEndsAt, createStartsAt, createTitle, refresh])
+  }, [
+    createDescription,
+    createEndsAt,
+    createStartsAt,
+    createName,
+    createRegistrationMode,
+    refresh,
+  ])
 
   const deleteEvent = useCallback(
     (id: string): void => {
@@ -226,10 +242,11 @@ export const EventsContainer = (): React.JSX.Element => {
       onDelete={deleteEvent}
       create={{
         open: createOpen,
-        title: createTitle,
+        name: createName,
         description: createDescription,
         startsAt: createStartsAt,
         endsAt: createEndsAt,
+        registrationMode: createRegistrationMode,
         issues: createIssues,
         error: createError,
         onOpenChange: (open) => {
@@ -239,10 +256,11 @@ export const EventsContainer = (): React.JSX.Element => {
             setCreateError(null)
           }
         },
-        onTitleChange: setCreateTitle,
+        onNameChange: setCreateName,
         onDescriptionChange: setCreateDescription,
         onStartsAtChange: setCreateStartsAt,
         onEndsAtChange: setCreateEndsAt,
+        onRegistrationModeChange: setCreateRegistrationMode,
         onCancel: cancelCreate,
         onSubmit: submitCreate,
       }}
