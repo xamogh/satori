@@ -50,10 +50,14 @@ export type GroupsPageProps = {
   readonly onQueryChange: (value: string) => void
   readonly onRefresh: () => void
   readonly onDelete: (id: string) => void
+  readonly onViewMembers: (group: Group) => void
   readonly create: GroupsCreateFormState
 }
 
-const groupsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableColumn<Group>> => [
+const groupsColumns = (
+  onDelete: (id: string) => void,
+  onViewMembers: (group: Group) => void
+): ReadonlyArray<DataTableColumn<Group>> => [
   {
     id: 'group',
     header: 'Group',
@@ -88,6 +92,11 @@ const groupsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableC
         label="Open group actions"
         actions={[
           {
+            id: 'members',
+            label: 'Members',
+            onSelect: () => onViewMembers(group)
+          },
+          {
             id: 'delete',
             label: 'Delete',
             destructive: true,
@@ -112,6 +121,7 @@ export const GroupsPage = ({
   onQueryChange,
   onRefresh,
   onDelete,
+  onViewMembers,
   create
 }: GroupsPageProps): React.JSX.Element => (
   <PageContainer>
@@ -248,7 +258,7 @@ export const GroupsPage = ({
     ) : (
       <>
         <DataTable
-          columns={groupsColumns(onDelete)}
+          columns={groupsColumns(onDelete, onViewMembers)}
           rows={groups}
           loading={loading}
           getRowKey={(group) => group.id}
