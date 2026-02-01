@@ -1,7 +1,7 @@
-import * as React from "react"
-import { cn } from "../../lib/utils"
-import { Card, CardContent } from "./card"
-import { Skeleton } from "./skeleton"
+import * as React from 'react'
+import { cn } from '../../lib/utils'
+import { Card, CardContent } from './card'
+import { Skeleton } from './skeleton'
 
 export type StatCardProps = {
   readonly title: string
@@ -13,16 +13,16 @@ export type StatCardProps = {
     readonly label: string
   }
   readonly loading?: boolean
-  readonly variant?: "default" | "primary" | "success" | "warning" | "destructive"
+  readonly variant?: 'default' | 'primary' | 'success' | 'warning' | 'destructive'
   readonly className?: string
 }
 
 const variantStyles = {
-  default: "bg-muted/50",
-  primary: "bg-primary/10 text-primary",
-  success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  destructive: "bg-destructive/10 text-destructive",
+  default: 'bg-muted/50',
+  primary: 'bg-primary/10 text-primary',
+  success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  warning: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  destructive: 'bg-destructive/10 text-destructive'
 } as const
 
 export const StatCard = ({
@@ -32,10 +32,10 @@ export const StatCard = ({
   icon,
   trend,
   loading = false,
-  variant = "default",
-  className,
+  variant = 'default',
+  className
 }: StatCardProps): React.JSX.Element => (
-  <Card className={cn("overflow-hidden", className)}>
+  <Card className={cn('overflow-hidden', className)}>
     <CardContent className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 space-y-2">
@@ -51,18 +51,20 @@ export const StatCard = ({
           {trend && !loading ? (
             <p
               className={cn(
-                "text-xs font-medium",
-                trend.value >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
+                'text-xs font-medium',
+                trend.value >= 0
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-red-600 dark:text-red-400'
               )}
             >
-              {trend.value >= 0 ? "+" : ""}
+              {trend.value >= 0 ? '+' : ''}
               {trend.value}% {trend.label}
             </p>
           ) : null}
         </div>
         <div
           className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
             variantStyles[variant]
           )}
         >
@@ -74,11 +76,11 @@ export const StatCard = ({
 )
 
 export const StatCardSkeleton = ({
-  className,
+  className
 }: {
   readonly className?: string
 }): React.JSX.Element => (
-  <Card className={cn("overflow-hidden", className)}>
+  <Card className={cn('overflow-hidden', className)}>
     <CardContent className="p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 space-y-2">

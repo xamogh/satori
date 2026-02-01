@@ -1,11 +1,11 @@
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react"
-import { Either, Schema } from "effect"
-import { EventsPage } from "../components/pages/EventsPage"
-import { EventCreateInputSchema, type Event } from "@satori/domain/domain/event"
-import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
-import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
-import { createStore } from "../utils/store"
-import { clampPageIndex, slicePage } from "../utils/pagination"
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
+import { Either, Schema } from 'effect'
+import { EventsPage } from '../components/pages/EventsPage'
+import { EventCreateInputSchema, type Event } from '@satori/domain/domain/event'
+import { formatParseIssues } from '@satori/ipc-contract/utils/parseIssue'
+import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
+import { createStore } from '../utils/store'
+import { clampPageIndex, slicePage } from '../utils/pagination'
 
 const normalizeQuery = (raw: string): string | undefined => {
   const trimmed = raw.trim()
@@ -31,7 +31,7 @@ type EventsListState = {
 const eventsListStore = createStore<EventsListState>({
   events: [],
   loading: false,
-  error: null,
+  error: null
 })
 
 let eventsListStarted = false
@@ -44,7 +44,7 @@ const refreshEventsList = (query: string | undefined): Promise<void> => {
   eventsListStore.updateSnapshot((current) => ({
     ...current,
     loading: true,
-    error: null,
+    error: null
   }))
 
   return window.api.eventsList({ query }).then(
@@ -53,11 +53,11 @@ const refreshEventsList = (query: string | undefined): Promise<void> => {
         return
       }
 
-      if (result._tag === "Ok") {
+      if (result._tag === 'Ok') {
         eventsListStore.setSnapshot({
           events: result.value,
           loading: false,
-          error: null,
+          error: null
         })
         return
       }
@@ -65,7 +65,7 @@ const refreshEventsList = (query: string | undefined): Promise<void> => {
       eventsListStore.updateSnapshot((current) => ({
         ...current,
         loading: false,
-        error: result.error.message,
+        error: result.error.message
       }))
     },
     (reason) => {
@@ -76,7 +76,7 @@ const refreshEventsList = (query: string | undefined): Promise<void> => {
       eventsListStore.updateSnapshot((current) => ({
         ...current,
         loading: false,
-        error: String(reason),
+        error: String(reason)
       }))
     }
   )
@@ -98,7 +98,7 @@ export const EventsContainer = (): React.JSX.Element => {
     eventsListStore.getSnapshot
   )
 
-  const [query, setQuery] = useState("")
+  const [query, setQuery] = useState('')
   const normalizedQuery = useMemo(() => normalizeQuery(query), [query])
 
   const [pageIndex, setPageIndex] = useState(0)
@@ -115,13 +115,13 @@ export const EventsContainer = (): React.JSX.Element => {
   )
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [createName, setCreateName] = useState("")
-  const [createDescription, setCreateDescription] = useState("")
-  const [createStartsAt, setCreateStartsAt] = useState("")
-  const [createEndsAt, setCreateEndsAt] = useState("")
+  const [createName, setCreateName] = useState('')
+  const [createDescription, setCreateDescription] = useState('')
+  const [createStartsAt, setCreateStartsAt] = useState('')
+  const [createEndsAt, setCreateEndsAt] = useState('')
   const [createRegistrationMode, setCreateRegistrationMode] = useState<
-    "PRE_REGISTRATION" | "WALK_IN"
-  >("PRE_REGISTRATION")
+    'PRE_REGISTRATION' | 'WALK_IN'
+  >('PRE_REGISTRATION')
   const [createIssues, setCreateIssues] = useState<ReadonlyArray<SchemaIssue>>([])
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -142,14 +142,14 @@ export const EventsContainer = (): React.JSX.Element => {
     const startsAtMs = parseDateTimeLocalMs(createStartsAt)
     if (startsAtMs === null) {
       setCreateIssues([])
-      setCreateError("Start date/time is required.")
+      setCreateError('Start date/time is required.')
       return
     }
 
     const endsAtMs = parseDateTimeLocalMs(createEndsAt)
     if (createEndsAt.trim().length > 0 && endsAtMs === null) {
       setCreateIssues([])
-      setCreateError("End date/time is invalid.")
+      setCreateError('End date/time is invalid.')
       return
     }
 
@@ -158,11 +158,11 @@ export const EventsContainer = (): React.JSX.Element => {
       name: createName,
       description: createDescription.trim().length === 0 ? null : createDescription,
       registrationMode: createRegistrationMode,
-      status: "DRAFT",
+      status: 'DRAFT',
       startsAtMs,
       endsAtMs,
       empowermentId: null,
-      guruId: null,
+      guruId: null
     })
 
     if (Either.isLeft(decoded)) {
@@ -173,13 +173,13 @@ export const EventsContainer = (): React.JSX.Element => {
     setCreateIssues([])
     window.api.eventsCreate(decoded.right).then(
       (result) => {
-        if (result._tag === "Ok") {
+        if (result._tag === 'Ok') {
           setCreateOpen(false)
-          setCreateName("")
-          setCreateDescription("")
-          setCreateStartsAt("")
-          setCreateEndsAt("")
-          setCreateRegistrationMode("PRE_REGISTRATION")
+          setCreateName('')
+          setCreateDescription('')
+          setCreateStartsAt('')
+          setCreateEndsAt('')
+          setCreateRegistrationMode('PRE_REGISTRATION')
           refresh()
           return
         }
@@ -188,32 +188,25 @@ export const EventsContainer = (): React.JSX.Element => {
       },
       (reason) => setCreateError(String(reason))
     )
-  }, [
-    createDescription,
-    createEndsAt,
-    createStartsAt,
-    createName,
-    createRegistrationMode,
-    refresh,
-  ])
+  }, [createDescription, createEndsAt, createStartsAt, createName, createRegistrationMode, refresh])
 
   const deleteEvent = useCallback(
     (id: string): void => {
       window.api.eventsDelete({ id }).then(
         (result) => {
-          if (result._tag === "Ok") {
+          if (result._tag === 'Ok') {
             refresh()
             return
           }
           eventsListStore.updateSnapshot((current) => ({
             ...current,
-            error: result.error.message,
+            error: result.error.message
           }))
         },
         (reason) =>
           eventsListStore.updateSnapshot((current) => ({
             ...current,
-            error: String(reason),
+            error: String(reason)
           }))
       )
     },
@@ -262,7 +255,7 @@ export const EventsContainer = (): React.JSX.Element => {
         onEndsAtChange: setCreateEndsAt,
         onRegistrationModeChange: setCreateRegistrationMode,
         onCancel: cancelCreate,
-        onSubmit: submitCreate,
+        onSubmit: submitCreate
       }}
     />
   )

@@ -1,4 +1,4 @@
-import type { SyncStatus } from "@satori/domain/sync/schemas"
+import type { SyncStatus } from '@satori/domain/sync/schemas'
 import {
   CloudSync,
   RefreshCw,
@@ -6,18 +6,18 @@ import {
   AlertCircle,
   Clock,
   Upload,
-  Loader2,
-} from "lucide-react"
-import { Button } from "../ui/button"
-import { Card, CardContent } from "../ui/card"
-import { formatDateTime, formatRelativeTime } from "../../utils/date"
-import { Alert, AlertDescription } from "../ui/alert"
-import { PageHeader, PageContainer, ContentSection } from "../layout/PageHeader"
-import { StatusBadge } from "../ui/status-badge"
-import { Progress } from "../ui/progress"
-import { ActivityItem, ActivityList } from "../ui/activity-item"
-import { EmptyState } from "../ui/empty-state"
-import { Skeleton } from "../ui/skeleton"
+  Loader2
+} from 'lucide-react'
+import { Button } from '../ui/button'
+import { Card, CardContent } from '../ui/card'
+import { formatDateTime, formatRelativeTime } from '../../utils/date'
+import { Alert, AlertDescription } from '../ui/alert'
+import { PageHeader, PageContainer, ContentSection } from '../layout/PageHeader'
+import { StatusBadge } from '../ui/status-badge'
+import { Progress } from '../ui/progress'
+import { ActivityItem, ActivityList } from '../ui/activity-item'
+import { EmptyState } from '../ui/empty-state'
+import { Skeleton } from '../ui/skeleton'
 
 export type SyncPageProps = {
   readonly status: SyncStatus | null
@@ -27,16 +27,19 @@ export type SyncPageProps = {
   readonly onSyncNow: () => void
 }
 
-const getSyncStatusInfo = (status: SyncStatus | null, loading: boolean): {
-  variant: "success" | "error" | "warning" | "pending" | "syncing"
+const getSyncStatusInfo = (
+  status: SyncStatus | null,
+  loading: boolean
+): {
+  variant: 'success' | 'error' | 'warning' | 'pending' | 'syncing'
   label: string
 } => {
-  if (loading) return { variant: "syncing", label: "Syncing" }
-  if (!status) return { variant: "pending", label: "Unknown" }
-  if (status.lastError) return { variant: "error", label: "Error" }
-  if (status.pendingOutboxCount > 0) return { variant: "warning", label: "Pending" }
-  if (status.lastSuccessAtMs) return { variant: "success", label: "Synced" }
-  return { variant: "pending", label: "Not synced" }
+  if (loading) return { variant: 'syncing', label: 'Syncing' }
+  if (!status) return { variant: 'pending', label: 'Unknown' }
+  if (status.lastError) return { variant: 'error', label: 'Error' }
+  if (status.pendingOutboxCount > 0) return { variant: 'warning', label: 'Pending' }
+  if (status.lastSuccessAtMs) return { variant: 'success', label: 'Synced' }
+  return { variant: 'pending', label: 'Not synced' }
 }
 
 export const SyncPage = ({
@@ -44,10 +47,11 @@ export const SyncPage = ({
   loading,
   error,
   onRefresh,
-  onSyncNow,
+  onSyncNow
 }: SyncPageProps): React.JSX.Element => {
   const syncInfo = getSyncStatusInfo(status, loading)
-  const hasActivity = status?.lastSuccessAtMs || status?.lastAttemptAtMs || status?.pendingOutboxCount
+  const hasActivity =
+    status?.lastSuccessAtMs || status?.lastAttemptAtMs || status?.pendingOutboxCount
 
   return (
     <PageContainer>
@@ -59,7 +63,7 @@ export const SyncPage = ({
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
-              <RefreshCw className={loading ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
+              <RefreshCw className={loading ? 'mr-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4'} />
               Refresh
             </Button>
             <Button size="sm" onClick={onSyncNow} disabled={loading}>
@@ -101,16 +105,15 @@ export const SyncPage = ({
                     <Progress
                       value={status?.pendingOutboxCount ?? 0}
                       max={Math.max(status?.pendingOutboxCount ?? 0, 10)}
-                      className={status?.pendingOutboxCount ? "" : "opacity-50"}
+                      className={status?.pendingOutboxCount ? '' : 'opacity-50'}
                     />
                     {status?.pendingOutboxCount ? (
                       <p className="text-xs text-muted-foreground">
-                        {status.pendingOutboxCount} item{status.pendingOutboxCount === 1 ? "" : "s"} waiting to sync
+                        {status.pendingOutboxCount} item{status.pendingOutboxCount === 1 ? '' : 's'}{' '}
+                        waiting to sync
                       </p>
                     ) : (
-                      <p className="text-xs text-muted-foreground">
-                        All changes have been synced
-                      </p>
+                      <p className="text-xs text-muted-foreground">All changes have been synced</p>
                     )}
                   </div>
 
@@ -121,7 +124,9 @@ export const SyncPage = ({
                         <span className="text-muted-foreground">Last successful sync</span>
                       </div>
                       <span className="text-sm font-medium">
-                        {status?.lastSuccessAtMs ? formatRelativeTime(status.lastSuccessAtMs) : "Never"}
+                        {status?.lastSuccessAtMs
+                          ? formatRelativeTime(status.lastSuccessAtMs)
+                          : 'Never'}
                       </span>
                     </div>
 
@@ -131,7 +136,9 @@ export const SyncPage = ({
                         <span className="text-muted-foreground">Last attempt</span>
                       </div>
                       <span className="text-sm font-medium">
-                        {status?.lastAttemptAtMs ? formatRelativeTime(status.lastAttemptAtMs) : "Never"}
+                        {status?.lastAttemptAtMs
+                          ? formatRelativeTime(status.lastAttemptAtMs)
+                          : 'Never'}
                       </span>
                     </div>
 
@@ -141,7 +148,9 @@ export const SyncPage = ({
                           <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
                           <div className="space-y-1 min-w-0 overflow-hidden">
                             <p className="text-sm font-medium text-destructive">Last error</p>
-                            <p className="text-sm text-destructive/80 break-words line-clamp-3">{status.lastError}</p>
+                            <p className="text-sm text-destructive/80 break-words line-clamp-3">
+                              {status.lastError}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -201,8 +210,7 @@ export const SyncPage = ({
                     />
                   ) : null}
 
-                  {status?.lastAttemptAtMs &&
-                  status.lastAttemptAtMs !== status?.lastSuccessAtMs ? (
+                  {status?.lastAttemptAtMs && status.lastAttemptAtMs !== status?.lastSuccessAtMs ? (
                     <ActivityItem
                       icon={
                         status.lastError ? (
@@ -211,9 +219,9 @@ export const SyncPage = ({
                           <Clock className="h-4 w-4" />
                         )
                       }
-                      variant={status.lastError ? "error" : "default"}
-                      title={status.lastError ? "Sync failed" : "Sync attempted"}
-                      description={status.lastError ?? "Connection attempt made"}
+                      variant={status.lastError ? 'error' : 'default'}
+                      title={status.lastError ? 'Sync failed' : 'Sync attempted'}
+                      description={status.lastError ?? 'Connection attempt made'}
                       timestamp={formatDateTime(status.lastAttemptAtMs)}
                     />
                   ) : null}
@@ -222,7 +230,7 @@ export const SyncPage = ({
                     <ActivityItem
                       icon={<Upload className="h-4 w-4" />}
                       variant="warning"
-                      title={`${status.pendingOutboxCount} pending change${status.pendingOutboxCount === 1 ? "" : "s"}`}
+                      title={`${status.pendingOutboxCount} pending change${status.pendingOutboxCount === 1 ? '' : 's'}`}
                       description="Waiting to be synced to the server"
                     />
                   ) : null}

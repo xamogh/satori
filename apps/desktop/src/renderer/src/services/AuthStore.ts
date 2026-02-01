@@ -1,16 +1,16 @@
-import { createStore } from "../utils/store"
-import type { AuthSignInRequest, AuthState, IpcResult } from "@satori/ipc-contract/ipc/contract"
+import { createStore } from '../utils/store'
+import type { AuthSignInRequest, AuthState, IpcResult } from '@satori/ipc-contract/ipc/contract'
 
-export type AuthViewState = { readonly _tag: "Loading" } | AuthState
+export type AuthViewState = { readonly _tag: 'Loading' } | AuthState
 
-const loadingState: AuthViewState = { _tag: "Loading" }
+const loadingState: AuthViewState = { _tag: 'Loading' }
 
 const lockFromAuthenticated = (
-  state: Extract<AuthState, { _tag: "Authenticated" }>
-): Extract<AuthState, { _tag: "Locked" }> => ({
-  _tag: "Locked",
-  reason: "TokenExpired",
-  email: state.email,
+  state: Extract<AuthState, { _tag: 'Authenticated' }>
+): Extract<AuthState, { _tag: 'Locked' }> => ({
+  _tag: 'Locked',
+  reason: 'TokenExpired',
+  email: state.email
 })
 
 const authStore = createStore<AuthViewState>(loadingState)
@@ -30,7 +30,7 @@ const clearTokenTimeout = (): void => {
 const setAuthState = (state: AuthViewState): void => {
   clearTokenTimeout()
 
-  if (state._tag === "Authenticated") {
+  if (state._tag === 'Authenticated') {
     const timeoutMs = state.expiresAtMs - Date.now()
     if (timeoutMs <= 0) {
       authStore.setSnapshot(lockFromAuthenticated(state))
@@ -48,12 +48,12 @@ const setAuthState = (state: AuthViewState): void => {
 
 const refresh = (): Promise<AuthViewState> =>
   window.api.authStatus().then((result) => {
-    if (result._tag === "Ok") {
+    if (result._tag === 'Ok') {
       setAuthState(result.value)
       return result.value
     }
 
-    const next: AuthViewState = { _tag: "Unauthenticated" }
+    const next: AuthViewState = { _tag: 'Unauthenticated' }
     setAuthState(next)
     return next
   })
@@ -69,7 +69,7 @@ const subscribe = (listener: () => void): (() => void) => {
 
 const signIn = (payload: AuthSignInRequest): Promise<IpcResult<AuthState>> =>
   window.api.authSignIn(payload).then((result) => {
-    if (result._tag === "Ok") {
+    if (result._tag === 'Ok') {
       setAuthState(result.value)
     }
 
@@ -78,7 +78,7 @@ const signIn = (payload: AuthSignInRequest): Promise<IpcResult<AuthState>> =>
 
 const signOut = (): Promise<IpcResult<AuthState>> =>
   window.api.authSignOut().then((result) => {
-    if (result._tag === "Ok") {
+    if (result._tag === 'Ok') {
       setAuthState(result.value)
     }
 
@@ -90,5 +90,5 @@ export const AuthStore = {
   getSnapshot: authStore.getSnapshot,
   refresh,
   signIn,
-  signOut,
+  signOut
 } as const

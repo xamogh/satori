@@ -1,19 +1,19 @@
-import { Effect, Option, Schema } from "effect"
-import { UserRoleSchema } from "@satori/domain/auth/schemas"
-import { PgClient } from "../db/pg-client"
-import { DbError } from "../errors"
+import { Effect, Option, Schema } from 'effect'
+import { UserRoleSchema } from '@satori/domain/auth/schemas'
+import { PgClient } from '../db/pg-client'
+import { DbError } from '../errors'
 
 const UserRowSchema = Schema.Struct({
   id: Schema.String,
   email: Schema.String,
   passwordHash: Schema.String,
-  role: UserRoleSchema,
+  role: UserRoleSchema
 })
 
 export type UserRow = Schema.Schema.Type<typeof UserRowSchema>
 
 export class UsersRepository extends Effect.Service<UsersRepository>()(
-  "repository/UsersRepository",
+  'repository/UsersRepository',
   {
     dependencies: [PgClient.Default],
     effect: Effect.gen(function* () {
@@ -31,8 +31,8 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
                 Effect.mapError(
                   (error) =>
                     new DbError({
-                      message: "Invalid user row shape",
-                      cause: error,
+                      message: 'Invalid user row shape',
+                      cause: error
                     })
                 )
               )
@@ -41,6 +41,6 @@ export class UsersRepository extends Effect.Service<UsersRepository>()(
           )
 
       return { findByEmail } as const
-    }),
+    })
   }
 ) {}

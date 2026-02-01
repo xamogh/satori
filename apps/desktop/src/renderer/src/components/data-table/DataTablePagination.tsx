@@ -1,14 +1,14 @@
-import * as React from "react"
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
-import { cn } from "../../lib/utils"
-import { clampPageIndex, getPageCount, getPageNumbers } from "../../utils/pagination"
-import { Button } from "../ui/button"
+import * as React from 'react'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { cn } from '../../lib/utils'
+import { clampPageIndex, getPageCount, getPageNumbers } from '../../utils/pagination'
+import { Button } from '../ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu"
+  DropdownMenuTrigger
+} from '../ui/dropdown-menu'
 
 export type DataTablePaginationProps = {
   readonly totalItems: number
@@ -29,7 +29,7 @@ export const DataTablePagination = ({
   onPageIndexChange,
   onPageSizeChange,
   pageSizeOptions = defaultPageSizeOptions,
-  className,
+  className
 }: DataTablePaginationProps): React.JSX.Element => {
   const pageCount = getPageCount(totalItems, pageSize)
   const safePageIndex = clampPageIndex(pageIndex, totalItems, pageSize)
@@ -37,7 +37,7 @@ export const DataTablePagination = ({
   const pageNumbers = getPageNumbers(currentPage, pageCount)
 
   return (
-    <div className={cn("flex items-center justify-between gap-3 px-2", className)}>
+    <div className={cn('flex items-center justify-between gap-3 px-2', className)}>
       <div className="flex items-center gap-2">
         <div className="hidden text-sm font-medium sm:block">Rows per page</div>
         <DropdownMenu>
@@ -49,10 +49,7 @@ export const DataTablePagination = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             {pageSizeOptions.map((size) => (
-              <DropdownMenuItem
-                key={size}
-                onSelect={() => onPageSizeChange(size)}
-              >
+              <DropdownMenuItem key={size} onSelect={() => onPageSizeChange(size)}>
                 {size}
               </DropdownMenuItem>
             ))}
@@ -87,14 +84,14 @@ export const DataTablePagination = ({
           </Button>
 
           {pageNumbers.map((pageNumber, index) =>
-            pageNumber === "..." ? (
+            pageNumber === '...' ? (
               <div key={`${pageNumber}-${index}`} className="px-1 text-sm text-muted-foreground">
                 …
               </div>
             ) : (
               <Button
                 key={`${pageNumber}-${index}`}
-                variant={pageNumber === currentPage ? "default" : "outline"}
+                variant={pageNumber === currentPage ? 'default' : 'outline'}
                 className="h-8 min-w-8 px-2"
                 onClick={() => onPageIndexChange(pageNumber - 1)}
               >

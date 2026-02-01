@@ -1,11 +1,11 @@
-import { useRef } from "react"
-import type { Person } from "@satori/domain/domain/person"
-import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
-import { Users, Plus, Search, RefreshCw, AlertCircle, Mail, Phone, Image } from "lucide-react"
-import { Button } from "../ui/button"
-import { DataTable, type DataTableColumn } from "../data-table/DataTable"
-import { DataTablePagination } from "../data-table/DataTablePagination"
-import { RowActionsMenu } from "../data-table/RowActionsMenu"
+import { useRef } from 'react'
+import type { Person } from '@satori/domain/domain/person'
+import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
+import { Users, Plus, Search, RefreshCw, AlertCircle, Mail, Phone, Image } from 'lucide-react'
+import { Button } from '../ui/button'
+import { DataTable, type DataTableColumn } from '../data-table/DataTable'
+import { DataTablePagination } from '../data-table/DataTablePagination'
+import { RowActionsMenu } from '../data-table/RowActionsMenu'
 import {
   Dialog,
   DialogContent,
@@ -13,16 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
-} from "../ui/dialog"
-import { Input } from "../ui/input"
-import { Label } from "../ui/label"
-import { SchemaIssueList } from "../SchemaIssueList"
-import { Alert, AlertDescription } from "../ui/alert"
-import { PageHeader, PageContainer } from "../layout/PageHeader"
-import { EmptyState } from "../ui/empty-state"
-import { Badge } from "../ui/badge"
-import { Avatar, AvatarFallback } from "../ui/avatar"
+  DialogDescription
+} from '../ui/dialog'
+import { Input } from '../ui/input'
+import { Label } from '../ui/label'
+import { SchemaIssueList } from '../SchemaIssueList'
+import { Alert, AlertDescription } from '../ui/alert'
+import { PageHeader, PageContainer } from '../layout/PageHeader'
+import { EmptyState } from '../ui/empty-state'
+import { Badge } from '../ui/badge'
+import { Avatar, AvatarFallback } from '../ui/avatar'
 
 export type PeopleCreateFormState = {
   readonly open: boolean
@@ -81,8 +81,8 @@ const getInitials = (name: string): string => {
 
 const getFullName = (person: Person): string =>
   [person.firstName, person.middleName, person.lastName]
-    .filter((value): value is string => typeof value === "string" && value.length > 0)
-    .join(" ")
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+    .join(' ')
 
 const peopleColumns = (
   onDeletePerson: (id: string) => void,
@@ -90,8 +90,8 @@ const peopleColumns = (
   onUploadPhoto: (personId: string, file: File) => void
 ): ReadonlyArray<DataTableColumn<Person>> => [
   {
-    id: "person",
-    header: "Person",
+    id: 'person',
+    header: 'Person',
     cell: (person) => (
       <div className="flex items-center gap-3">
         <Avatar className="h-10 w-10">
@@ -109,11 +109,11 @@ const peopleColumns = (
           ) : null}
         </div>
       </div>
-    ),
+    )
   },
   {
-    id: "contact",
-    header: "Contact",
+    id: 'contact',
+    header: 'Contact',
     cell: (person) => (
       <div className="space-y-1 text-sm">
         {person.phone1 ? (
@@ -138,13 +138,13 @@ const peopleColumns = (
           <span className="text-muted-foreground">No contact info</span>
         ) : null}
       </div>
-    ),
+    )
   },
   {
-    id: "actions",
-    header: "",
-    headerClassName: "w-[56px]",
-    cellClassName: "text-right",
+    id: 'actions',
+    header: '',
+    headerClassName: 'w-[56px]',
+    cellClassName: 'text-right',
     cell: (person) => (
       <PersonActionsCell
         person={person}
@@ -152,8 +152,8 @@ const peopleColumns = (
         onViewPhoto={onViewPhoto}
         onUploadPhoto={onUploadPhoto}
       />
-    ),
-  },
+    )
+  }
 ]
 
 export const PeoplePage = ({
@@ -172,18 +172,14 @@ export const PeoplePage = ({
   onViewPhoto,
   onUploadPhoto,
   create,
-  photoDialog,
+  photoDialog
 }: PeoplePageProps): React.JSX.Element => (
   <PageContainer>
     <PageHeader
       icon={<Users className="h-5 w-5" />}
       title="People"
       description="Directory for people and attendance tracking."
-      badge={
-        peopleTotal > 0 ? (
-          <Badge variant="secondary">{peopleTotal} total</Badge>
-        ) : null
-      }
+      badge={peopleTotal > 0 ? <Badge variant="secondary">{peopleTotal} total</Badge> : null}
       actions={
         <Dialog open={create.open} onOpenChange={create.onOpenChange}>
           <DialogTrigger asChild>
@@ -195,9 +191,7 @@ export const PeoplePage = ({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add Person</DialogTitle>
-              <DialogDescription>
-                Add a new person to your directory.
-              </DialogDescription>
+              <DialogDescription>Add a new person to your directory.</DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
@@ -302,8 +296,8 @@ export const PeoplePage = ({
         />
       </div>
       <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
-        <RefreshCw className={loading ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
-        {loading ? "Loading..." : "Refresh"}
+        <RefreshCw className={loading ? 'mr-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4'} />
+        {loading ? 'Loading...' : 'Refresh'}
       </Button>
     </div>
 
@@ -311,7 +305,9 @@ export const PeoplePage = ({
       <EmptyState
         icon={<Users className="h-6 w-6" />}
         title="No people found"
-        description={query ? "Try adjusting your search terms." : "Get started by adding your first person."}
+        description={
+          query ? 'Try adjusting your search terms.' : 'Get started by adding your first person.'
+        }
         action={
           !query ? (
             <Button size="sm" onClick={() => create.onOpenChange(true)}>
@@ -394,7 +390,7 @@ const PersonActionsCell = ({
   person,
   onDeletePerson,
   onViewPhoto,
-  onUploadPhoto,
+  onUploadPhoto
 }: PersonActionsCellProps): React.JSX.Element => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const photoId = person.photoId
@@ -407,23 +403,23 @@ const PersonActionsCell = ({
           ...(photoId
             ? [
                 {
-                  id: "view_photo",
-                  label: "View photo",
-                  onSelect: () => onViewPhoto(photoId),
-                },
+                  id: 'view_photo',
+                  label: 'View photo',
+                  onSelect: () => onViewPhoto(photoId)
+                }
               ]
             : []),
           {
-            id: "upload_photo",
-            label: "Upload photo",
-            onSelect: () => fileInputRef.current?.click(),
+            id: 'upload_photo',
+            label: 'Upload photo',
+            onSelect: () => fileInputRef.current?.click()
           },
           {
-            id: "delete",
-            label: "Delete",
+            id: 'delete',
+            label: 'Delete',
             destructive: true,
-            onSelect: () => onDeletePerson(person.id),
-          },
+            onSelect: () => onDeletePerson(person.id)
+          }
         ]}
       />
       <input
@@ -433,7 +429,7 @@ const PersonActionsCell = ({
         className="hidden"
         onChange={(event) => {
           const file = event.currentTarget.files?.[0]
-          event.currentTarget.value = ""
+          event.currentTarget.value = ''
           if (!file) return
           onUploadPhoto(person.id, file)
         }}

@@ -1,14 +1,14 @@
-import * as React from "react"
-import { MoreHorizontal } from "lucide-react"
-import { cn } from "../../lib/utils"
-import { Button } from "../ui/button"
+import * as React from 'react'
+import { MoreHorizontal } from 'lucide-react'
+import { cn } from '../../lib/utils'
+import { Button } from '../ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu"
+  DropdownMenuTrigger
+} from '../ui/dropdown-menu'
 
 export type RowAction = {
   readonly id: string
@@ -24,16 +24,16 @@ export type RowActionsMenuProps = {
 }
 
 export const RowActionsMenu = ({
-  label = "Open menu",
+  label = 'Open menu',
   actions,
-  className,
+  className
 }: RowActionsMenuProps): React.JSX.Element => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
       <Button
         variant="ghost"
         size="icon"
-        className={cn("h-8 w-8 p-0 data-[state=open]:bg-muted", className)}
+        className={cn('h-8 w-8 p-0 data-[state=open]:bg-muted', className)}
       >
         <MoreHorizontal className="h-4 w-4" />
         <span className="sr-only">{label}</span>
@@ -55,12 +55,10 @@ export const RowActionsMenu = ({
             <DropdownMenuItem
               key={action.id}
               onSelect={action.onSelect}
-              className={
-                action.destructive ? "text-destructive focus:text-destructive" : undefined
-              }
+              className={action.destructive ? 'text-destructive focus:text-destructive' : undefined}
             >
               {action.label}
-            </DropdownMenuItem>,
+            </DropdownMenuItem>
           ]
         })
       })()}

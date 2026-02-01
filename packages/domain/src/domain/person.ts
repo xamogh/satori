@@ -1,47 +1,40 @@
-import { Schema } from "effect"
-import { EmailSchema } from "../auth/schemas"
-import {
-  BooleanFromNumberSchema,
-  EntityIdSchema,
-  Nullable,
-  TimestampMsSchema,
-} from "./common"
+import { Schema } from 'effect'
+import { EmailSchema } from '../auth/schemas'
+import { BooleanFromNumberSchema, EntityIdSchema, Nullable, TimestampMsSchema } from './common'
 
 export const GenderSchema = Schema.Union(
-  Schema.Literal("male"),
-  Schema.Literal("female"),
-  Schema.Literal("other"),
-  Schema.Literal("prefer_not_to_say")
+  Schema.Literal('male'),
+  Schema.Literal('female'),
+  Schema.Literal('other'),
+  Schema.Literal('prefer_not_to_say')
 )
 
 export type Gender = Schema.Schema.Type<typeof GenderSchema>
 
 export const PersonTypeSchema = Schema.Union(
-  Schema.Literal("interested"),
-  Schema.Literal("contact"),
-  Schema.Literal("attended_orientation")
+  Schema.Literal('interested'),
+  Schema.Literal('contact'),
+  Schema.Literal('attended_orientation')
 )
 
 export type PersonType = Schema.Schema.Type<typeof PersonTypeSchema>
 
 export const PersonTitleSchema = Schema.Union(
-  Schema.Literal("dharma_dhar"),
-  Schema.Literal("dharmacharya"),
-  Schema.Literal("khenpo"),
-  Schema.Literal("sahayak_dharmacharya"),
-  Schema.Literal("sahayak_samathacharya")
+  Schema.Literal('dharma_dhar'),
+  Schema.Literal('dharmacharya'),
+  Schema.Literal('khenpo'),
+  Schema.Literal('sahayak_dharmacharya'),
+  Schema.Literal('sahayak_samathacharya')
 )
 
 export type PersonTitle = Schema.Schema.Type<typeof PersonTitleSchema>
 
 export const YearOfRefugeCalendarTypeSchema = Schema.Union(
-  Schema.Literal("BS"),
-  Schema.Literal("AD")
+  Schema.Literal('BS'),
+  Schema.Literal('AD')
 )
 
-export type YearOfRefugeCalendarType = Schema.Schema.Type<
-  typeof YearOfRefugeCalendarTypeSchema
->
+export type YearOfRefugeCalendarType = Schema.Schema.Type<typeof YearOfRefugeCalendarTypeSchema>
 
 export const PersonSchema = Schema.Struct({
   id: EntityIdSchema,
@@ -73,7 +66,7 @@ export const PersonSchema = Schema.Struct({
   photoId: Nullable(EntityIdSchema),
   updatedAtMs: TimestampMsSchema,
   deletedAtMs: Nullable(TimestampMsSchema),
-  serverModifiedAtMs: Nullable(TimestampMsSchema),
+  serverModifiedAtMs: Nullable(TimestampMsSchema)
 })
 
 export type Person = Schema.Schema.Type<typeof PersonSchema>
@@ -103,7 +96,7 @@ export const PersonCreateInputSchema = Schema.Struct({
   isSanghaMember: BooleanFromNumberSchema,
   centerId: Nullable(EntityIdSchema),
   isKramaInstructor: BooleanFromNumberSchema,
-  kramaInstructorPersonId: Nullable(EntityIdSchema),
+  kramaInstructorPersonId: Nullable(EntityIdSchema)
 })
 
 export type PersonCreateInput = Schema.Schema.Type<typeof PersonCreateInputSchema>
@@ -135,19 +128,19 @@ export const PersonUpdateInputSchema = Schema.Struct({
   centerId: Nullable(EntityIdSchema),
   isKramaInstructor: BooleanFromNumberSchema,
   kramaInstructorPersonId: Nullable(EntityIdSchema),
-  photoId: Nullable(EntityIdSchema),
+  photoId: Nullable(EntityIdSchema)
 })
 
 export type PersonUpdateInput = Schema.Schema.Type<typeof PersonUpdateInputSchema>
 
 export const PersonDeleteInputSchema = Schema.Struct({
-  id: EntityIdSchema,
+  id: EntityIdSchema
 })
 
 export type PersonDeleteInput = Schema.Schema.Type<typeof PersonDeleteInputSchema>
 
 export const PersonListQuerySchema = Schema.Struct({
-  query: Schema.optional(Schema.NonEmptyTrimmedString),
+  query: Schema.optional(Schema.NonEmptyTrimmedString)
 })
 
 export type PersonListQuery = Schema.Schema.Type<typeof PersonListQuerySchema>

@@ -1,5 +1,5 @@
-import { Context } from "effect"
-import type { UserRole } from "@satori/domain/auth/schemas"
+import { Context } from 'effect'
+import type { UserRole } from '@satori/domain/auth/schemas'
 
 export type AuthPrincipal = {
   readonly userId: string
@@ -7,7 +7,7 @@ export type AuthPrincipal = {
   readonly role: UserRole
 }
 
-export class AuthContext extends Context.Tag("satori/auth/AuthContext")<
+export class AuthContext extends Context.Tag('satori/auth/AuthContext')<
   AuthContext,
   AuthPrincipal
 >() {}

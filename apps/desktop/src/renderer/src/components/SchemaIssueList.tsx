@@ -1,5 +1,5 @@
-import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
+import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
+import { Alert, AlertDescription, AlertTitle } from './ui/alert'
 
 export type SchemaIssueListProps = {
   readonly issues: ReadonlyArray<SchemaIssue>
@@ -17,8 +17,7 @@ export const SchemaIssueList = ({ issues }: SchemaIssueListProps): React.JSX.Ele
         <ul className="mt-2 list-disc space-y-1 pl-5">
           {issues.map((issue, index) => (
             <li key={index}>
-              <span className="font-medium">{issue.path.join(".")}</span>:{" "}
-              {issue.message}
+              <span className="font-medium">{issue.path.join('.')}</span>: {issue.message}
             </li>
           ))}
         </ul>

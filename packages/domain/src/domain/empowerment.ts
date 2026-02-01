@@ -1,10 +1,5 @@
-import { Schema } from "effect"
-import {
-  BooleanFromNumberSchema,
-  EntityIdSchema,
-  Nullable,
-  TimestampMsSchema,
-} from "./common"
+import { Schema } from 'effect'
+import { BooleanFromNumberSchema, EntityIdSchema, Nullable, TimestampMsSchema } from './common'
 
 export const EmpowermentSchema = Schema.Struct({
   id: EntityIdSchema,
@@ -17,7 +12,7 @@ export const EmpowermentSchema = Schema.Struct({
   majorEmpowerment: BooleanFromNumberSchema,
   updatedAtMs: TimestampMsSchema,
   deletedAtMs: Nullable(TimestampMsSchema),
-  serverModifiedAtMs: Nullable(TimestampMsSchema),
+  serverModifiedAtMs: Nullable(TimestampMsSchema)
 })
 
 export type Empowerment = Schema.Schema.Type<typeof EmpowermentSchema>
@@ -29,12 +24,10 @@ export const EmpowermentCreateInputSchema = Schema.Struct({
   type: Nullable(Schema.String),
   form: Nullable(Schema.String),
   prerequisites: Nullable(Schema.String),
-  majorEmpowerment: BooleanFromNumberSchema,
+  majorEmpowerment: BooleanFromNumberSchema
 })
 
-export type EmpowermentCreateInput = Schema.Schema.Type<
-  typeof EmpowermentCreateInputSchema
->
+export type EmpowermentCreateInput = Schema.Schema.Type<typeof EmpowermentCreateInputSchema>
 
 export const EmpowermentUpdateInputSchema = Schema.Struct({
   id: EntityIdSchema,
@@ -44,25 +37,19 @@ export const EmpowermentUpdateInputSchema = Schema.Struct({
   type: Nullable(Schema.String),
   form: Nullable(Schema.String),
   prerequisites: Nullable(Schema.String),
-  majorEmpowerment: BooleanFromNumberSchema,
+  majorEmpowerment: BooleanFromNumberSchema
 })
 
-export type EmpowermentUpdateInput = Schema.Schema.Type<
-  typeof EmpowermentUpdateInputSchema
->
+export type EmpowermentUpdateInput = Schema.Schema.Type<typeof EmpowermentUpdateInputSchema>
 
 export const EmpowermentDeleteInputSchema = Schema.Struct({
-  id: EntityIdSchema,
+  id: EntityIdSchema
 })
 
-export type EmpowermentDeleteInput = Schema.Schema.Type<
-  typeof EmpowermentDeleteInputSchema
->
+export type EmpowermentDeleteInput = Schema.Schema.Type<typeof EmpowermentDeleteInputSchema>
 
 export const EmpowermentListQuerySchema = Schema.Struct({
-  query: Schema.optional(Schema.NonEmptyTrimmedString),
+  query: Schema.optional(Schema.NonEmptyTrimmedString)
 })
 
-export type EmpowermentListQuery = Schema.Schema.Type<
-  typeof EmpowermentListQuerySchema
->
+export type EmpowermentListQuery = Schema.Schema.Type<typeof EmpowermentListQuerySchema>

@@ -1,8 +1,5 @@
-import { is } from "@electron-toolkit/utils"
-import {
-  ALLOWED_EXTERNAL_PROTOCOLS,
-  APP_PROTOCOL_ORIGIN,
-} from "../constants/security"
+import { is } from '@electron-toolkit/utils'
+import { ALLOWED_EXTERNAL_PROTOCOLS, APP_PROTOCOL_ORIGIN } from '../constants/security'
 
 const parseUrl = (raw: string): URL | null => {
   try {
@@ -19,8 +16,8 @@ export const getAllowedRendererOrigins = (): ReadonlyArray<string> => {
     return [appOrigin]
   }
 
-  const devUrl = process.env["ELECTRON_RENDERER_URL"]
-  const devOrigin = devUrl ? parseUrl(devUrl)?.origin ?? null : null
+  const devUrl = process.env['ELECTRON_RENDERER_URL']
+  const devOrigin = devUrl ? (parseUrl(devUrl)?.origin ?? null) : null
   return devOrigin ? [devOrigin, appOrigin] : [appOrigin]
 }
 
@@ -41,4 +38,3 @@ export const isSafeOpenExternalUrl = (raw: string): boolean => {
 
   return (ALLOWED_EXTERNAL_PROTOCOLS as readonly string[]).includes(url.protocol)
 }
-

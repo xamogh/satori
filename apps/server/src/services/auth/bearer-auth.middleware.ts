@@ -1,8 +1,8 @@
-import { Effect, Layer, Redacted } from "effect"
-import { BearerAuthMiddleware } from "@satori/api-contract/api/auth/bearer-auth.middleware"
-import { Unauthorized } from "@satori/api-contract/api/http-errors"
-import { EnvVars } from "../../config/env-vars"
-import { verifyJwt } from "../../utils/jwt"
+import { Effect, Layer, Redacted } from 'effect'
+import { BearerAuthMiddleware } from '@satori/api-contract/api/auth/bearer-auth.middleware'
+import { Unauthorized } from '@satori/api-contract/api/http-errors'
+import { EnvVars } from '../../config/env-vars'
+import { verifyJwt } from '../../utils/jwt'
 
 export const BearerAuthMiddlewareLive = Layer.effect(
   BearerAuthMiddleware,
@@ -15,17 +15,17 @@ export const BearerAuthMiddlewareLive = Layer.effect(
           Effect.map((payload) => ({
             userId: payload.sub,
             email: payload.email,
-            role: payload.role,
+            role: payload.role
           })),
           Effect.catchTag(
-            "JwtError",
+            'JwtError',
             () =>
               new Unauthorized({
-                message: "Invalid or expired token",
-                cause: null,
+                message: 'Invalid or expired token',
+                cause: null
               })
           )
-        ),
+        )
     })
   })
 ).pipe(Layer.provide(EnvVars.Default))

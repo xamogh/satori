@@ -1,7 +1,7 @@
-import { Effect, Exit } from "effect"
-import { Pool, types, type PoolClient } from "pg"
-import { EnvVars } from "../config/env-vars"
-import { DbError } from "../errors"
+import { Effect, Exit } from 'effect'
+import { Pool, types, type PoolClient } from 'pg'
+import { EnvVars } from '../config/env-vars'
+import { DbError } from '../errors'
 
 types.setTypeParser(20, (value: string) => Number(value))
 
@@ -19,7 +19,7 @@ type Tx = {
   ) => Effect.Effect<QueryResult, DbError>
 }
 
-export class PgClient extends Effect.Service<PgClient>()("db/PgClient", {
+export class PgClient extends Effect.Service<PgClient>()('db/PgClient', {
   dependencies: [EnvVars.Default],
   effect: Effect.gen(function* () {
     const env = yield* EnvVars
@@ -34,13 +34,13 @@ export class PgClient extends Effect.Service<PgClient>()("db/PgClient", {
             resume(
               Effect.fail(
                 new DbError({
-                  message: "Failed to close DB pool",
-                  cause: error,
+                  message: 'Failed to close DB pool',
+                  cause: error
                 })
               )
             )
         )
-      }).pipe(Effect.catchTag("DbError", () => Effect.void))
+      }).pipe(Effect.catchTag('DbError', () => Effect.void))
     )
 
     const queryWith = (queryable: {
@@ -59,15 +59,15 @@ export class PgClient extends Effect.Service<PgClient>()("db/PgClient", {
               resume(
                 Effect.succeed({
                   rows: result.rows,
-                  rowCount: result.rowCount ?? 0,
+                  rowCount: result.rowCount ?? 0
                 })
               ),
             (error) =>
               resume(
                 Effect.fail(
                   new DbError({
-                    message: "Database query failed",
-                    cause: error,
+                    message: 'Database query failed',
+                    cause: error
                   })
                 )
               )
@@ -91,23 +91,23 @@ export class PgClient extends Effect.Service<PgClient>()("db/PgClient", {
                 resume(
                   Effect.fail(
                     new DbError({
-                      message: "Failed to connect to DB",
-                      cause: error,
+                      message: 'Failed to connect to DB',
+                      cause: error
                     })
                   )
                 )
             )
-            }),
+          }),
           (client) =>
             Effect.gen(function* () {
               const tx = queryWith(client)
 
-              yield* tx.query("begin").pipe(
+              yield* tx.query('begin').pipe(
                 Effect.mapError(
                   (error) =>
                     new DbError({
-                      message: "Failed to begin transaction",
-                      cause: error,
+                      message: 'Failed to begin transaction',
+                      cause: error
                     })
                 )
               )
@@ -115,12 +115,12 @@ export class PgClient extends Effect.Service<PgClient>()("db/PgClient", {
               const exit = yield* use(tx).pipe(Effect.exit)
 
               if (Exit.isSuccess(exit)) {
-                yield* tx.query("commit").pipe(
+                yield* tx.query('commit').pipe(
                   Effect.mapError(
                     (error) =>
                       new DbError({
-                        message: "Failed to commit transaction",
-                        cause: error,
+                        message: 'Failed to commit transaction',
+                        cause: error
                       })
                   )
                 )
@@ -128,15 +128,15 @@ export class PgClient extends Effect.Service<PgClient>()("db/PgClient", {
                 return exit.value
               }
 
-              yield* tx.query("rollback").pipe(
+              yield* tx.query('rollback').pipe(
                 Effect.mapError(
                   (error) =>
                     new DbError({
-                      message: "Failed to rollback transaction",
-                      cause: error,
+                      message: 'Failed to rollback transaction',
+                      cause: error
                     })
                 ),
-                Effect.catchTag("DbError", () => Effect.void)
+                Effect.catchTag('DbError', () => Effect.void)
               )
 
               return yield* Effect.failCause(exit.cause)
@@ -149,5 +149,5 @@ export class PgClient extends Effect.Service<PgClient>()("db/PgClient", {
       )
 
     return { query, transaction } as const
-  }),
+  })
 }) {}

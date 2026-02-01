@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema } from 'effect'
 
 export const TimestampMsSchema = Schema.Number
 
@@ -12,14 +12,12 @@ export const BooleanFromNumberSchema = Schema.transform(
   Schema.Union(Schema.Boolean, Schema.Number),
   Schema.Boolean,
   {
-    decode: (value) => (typeof value === "number" ? value !== 0 : value),
-    encode: (value) => value,
+    decode: (value) => (typeof value === 'number' ? value !== 0 : value),
+    encode: (value) => value
   }
 )
 
-export type BooleanFromNumber = Schema.Schema.Type<
-  typeof BooleanFromNumberSchema
->
+export type BooleanFromNumber = Schema.Schema.Type<typeof BooleanFromNumberSchema>
 
 export const Nullable = <A, I, R>(
   schema: Schema.Schema<A, I, R>

@@ -1,5 +1,5 @@
-import * as React from "react"
-import { cn } from "../../lib/utils"
+import * as React from 'react'
+import { cn } from '../../lib/utils'
 
 export type PageHeaderProps = {
   readonly icon?: React.ReactNode
@@ -16,13 +16,10 @@ export const PageHeader = ({
   description,
   badge,
   actions,
-  className,
+  className
 }: PageHeaderProps): React.JSX.Element => (
   <div
-    className={cn(
-      "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
-      className
-    )}
+    className={cn('flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between', className)}
   >
     <div className="flex items-start gap-3">
       {icon ? (
@@ -35,14 +32,10 @@ export const PageHeader = ({
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
           {badge}
         </div>
-        {description ? (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        ) : null}
+        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       </div>
     </div>
-    {actions ? (
-      <div className="flex flex-wrap items-center gap-2">{actions}</div>
-    ) : null}
+    {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
   </div>
 )
 
@@ -51,11 +44,8 @@ export type PageContainerProps = {
   readonly className?: string
 }
 
-export const PageContainer = ({
-  children,
-  className,
-}: PageContainerProps): React.JSX.Element => (
-  <div className={cn("flex flex-1 flex-col gap-6 min-w-0", className)}>{children}</div>
+export const PageContainer = ({ children, className }: PageContainerProps): React.JSX.Element => (
+  <div className={cn('flex flex-1 flex-col gap-6 min-w-0', className)}>{children}</div>
 )
 
 export type ContentSectionProps = {
@@ -71,9 +61,9 @@ export const ContentSection = ({
   description,
   actions,
   children,
-  className,
+  className
 }: ContentSectionProps): React.JSX.Element => (
-  <section className={cn("space-y-4 min-w-0", className)}>
+  <section className={cn('space-y-4 min-w-0', className)}>
     {title || actions ? (
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">

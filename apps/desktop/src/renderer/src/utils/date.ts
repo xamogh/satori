@@ -10,7 +10,7 @@ export const formatRelativeTime = (timestampMs: number): string => {
   const diffDays = Math.floor(diffHours / 24)
 
   if (diffSeconds < 60) {
-    return "Just now"
+    return 'Just now'
   }
   if (diffMinutes < 60) {
     return `${diffMinutes}m ago`
@@ -30,6 +30,6 @@ export const formatDate = (timestampMs: number): string =>
 
 export const formatTime = (timestampMs: number): string =>
   new Date(timestampMs).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
+    hour: '2-digit',
+    minute: '2-digit'
   })

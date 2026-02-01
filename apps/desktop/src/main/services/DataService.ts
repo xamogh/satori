@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto"
-import { Effect, Option, Schema } from "effect"
-import { LocalDbService, type LocalDbClient } from "./LocalDbService"
-import { EntityNotFoundError, OutboxEncodeError } from "../errors"
-import type { LocalDbQueryError } from "../errors"
+import { randomUUID } from 'node:crypto'
+import { Effect, Option, Schema } from 'effect'
+import { LocalDbService, type LocalDbClient } from './LocalDbService'
+import { EntityNotFoundError, OutboxEncodeError } from '../errors'
+import type { LocalDbQueryError } from '../errors'
 import {
   EventSchema,
   type Event,
@@ -21,24 +21,24 @@ import {
   type EventAttendeeCreateInput,
   type EventAttendeeDeleteInput,
   type EventAttendeeListQuery,
-  type EventAttendeeUpdateInput,
-} from "@satori/domain/domain/event"
+  type EventAttendeeUpdateInput
+} from '@satori/domain/domain/event'
 import {
   PersonSchema,
   type Person,
   type PersonCreateInput,
   type PersonDeleteInput,
   type PersonListQuery,
-  type PersonUpdateInput,
-} from "@satori/domain/domain/person"
+  type PersonUpdateInput
+} from '@satori/domain/domain/person'
 import {
   AttendanceSchema,
   type Attendance,
   type AttendanceCreateInput,
   type AttendanceDeleteInput,
   type AttendanceListQuery,
-  type AttendanceUpdateInput,
-} from "@satori/domain/domain/attendance"
+  type AttendanceUpdateInput
+} from '@satori/domain/domain/attendance'
 import {
   GroupSchema,
   PersonGroupSchema,
@@ -51,24 +51,24 @@ import {
   type PersonGroupCreateInput,
   type PersonGroupDeleteInput,
   type PersonGroupListQuery,
-  type PersonGroupUpdateInput,
-} from "@satori/domain/domain/group"
+  type PersonGroupUpdateInput
+} from '@satori/domain/domain/group'
 import {
   EmpowermentSchema,
   type Empowerment,
   type EmpowermentCreateInput,
   type EmpowermentDeleteInput,
   type EmpowermentListQuery,
-  type EmpowermentUpdateInput,
-} from "@satori/domain/domain/empowerment"
+  type EmpowermentUpdateInput
+} from '@satori/domain/domain/empowerment'
 import {
   GuruSchema,
   type Guru,
   type GuruCreateInput,
   type GuruDeleteInput,
   type GuruListQuery,
-  type GuruUpdateInput,
-} from "@satori/domain/domain/guru"
+  type GuruUpdateInput
+} from '@satori/domain/domain/guru'
 import {
   MahakramaHistorySchema,
   MahakramaStepSchema,
@@ -81,24 +81,21 @@ import {
   type MahakramaStepCreateInput,
   type MahakramaStepDeleteInput,
   type MahakramaStepListQuery,
-  type MahakramaStepUpdateInput,
-} from "@satori/domain/domain/mahakrama"
+  type MahakramaStepUpdateInput
+} from '@satori/domain/domain/mahakrama'
 import {
   PhotoSchema,
   type Photo,
   type PhotoCreateInput,
-  type PhotoDeleteInput,
-} from "@satori/domain/domain/photo"
-import { toSqliteBoolean } from "../utils/sqlite"
-import { SyncOperationSchema } from "@satori/domain/sync/schemas"
+  type PhotoDeleteInput
+} from '@satori/domain/domain/photo'
+import { toSqliteBoolean } from '../utils/sqlite'
+import { SyncOperationSchema } from '@satori/domain/sync/schemas'
 
 const nowMs = (): number => Date.now()
 
 const escapeLike = (query: string): string =>
-  query
-    .replaceAll("~", "~~")
-    .replaceAll("%", "~%")
-    .replaceAll("_", "~_")
+  query.replaceAll('~', '~~').replaceAll('%', '~%').replaceAll('_', '~_')
 
 const likeQuery = (query: string): string => `%${escapeLike(query)}%`
 
@@ -110,8 +107,8 @@ const encodeSyncOperationJson = (
     Effect.mapError(
       (error) =>
         new OutboxEncodeError({
-          message: "Failed to encode outbox operation",
-          cause: error,
+          message: 'Failed to encode outbox operation',
+          cause: error
         })
     )
   )
@@ -119,7 +116,7 @@ const encodeSyncOperationJson = (
 const makeDataService = Effect.gen(function* () {
   const db = yield* LocalDbService
 
-  type DbClient = Omit<LocalDbClient, "transaction">
+  type DbClient = Omit<LocalDbClient, 'transaction'>
 
   const insertOutbox = (
     client: DbClient,
@@ -127,24 +124,22 @@ const makeDataService = Effect.gen(function* () {
     json: string
   ): Effect.Effect<void, LocalDbQueryError> =>
     client
-      .run(
-        "insert into outbox (op_id, body_json, created_at_ms) values (?, ?, ?)",
-        [opId, json, nowMs()]
-      )
+      .run('insert into outbox (op_id, body_json, created_at_ms) values (?, ?, ?)', [
+        opId,
+        json,
+        nowMs()
+      ])
       .pipe(Effect.asVoid)
 
   const eventsList = ({
-    query,
+    query
   }: EventListQuery): Effect.Effect<ReadonlyArray<Event>, LocalDbQueryError> => {
     const where =
-      typeof query === "string"
+      typeof query === 'string'
         ? "where deleted_at_ms is null and (name like ? escape '~' or description like ? escape '~')"
-        : "where deleted_at_ms is null"
+        : 'where deleted_at_ms is null'
 
-    const params =
-      typeof query === "string"
-        ? [likeQuery(query), likeQuery(query)]
-        : []
+    const params = typeof query === 'string' ? [likeQuery(query), likeQuery(query)] : []
 
     return db.all(
       `
@@ -189,7 +184,7 @@ order by starts_at_ms desc
         guruId: input.guruId,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const eventDay: EventDay = {
@@ -199,19 +194,19 @@ order by starts_at_ms desc
         dateMs: event.startsAtMs,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const eventOp = {
-        _tag: "EventUpsert",
+        _tag: 'EventUpsert',
         opId: randomUUID(),
-        event,
+        event
       } as const
 
       const eventDayOp = {
-        _tag: "EventDayUpsert",
+        _tag: 'EventDayUpsert',
         opId: randomUUID(),
-        eventDay,
+        eventDay
       } as const
 
       const eventJson = yield* encodeSyncOperationJson(eventOp)
@@ -262,7 +257,7 @@ on conflict(id) do update set
               event.guruId,
               event.updatedAtMs,
               event.deletedAtMs,
-              event.serverModifiedAtMs,
+              event.serverModifiedAtMs
             ]
           )
           .pipe(
@@ -288,7 +283,7 @@ on conflict(id) do update set
                     eventDay.dateMs,
                     eventDay.updatedAtMs,
                     eventDay.deletedAtMs,
-                    eventDay.serverModifiedAtMs,
+                    eventDay.serverModifiedAtMs
                   ]
                 )
                 .pipe(Effect.asVoid)
@@ -319,13 +314,13 @@ on conflict(id) do update set
         guruId: input.guruId,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "EventUpsert",
+        _tag: 'EventUpsert',
         opId: randomUUID(),
-        event,
+        event
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -375,13 +370,10 @@ on conflict(id) do update set
               event.guruId,
               event.updatedAtMs,
               event.deletedAtMs,
-              event.serverModifiedAtMs,
+              event.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return event
@@ -389,47 +381,42 @@ on conflict(id) do update set
 
   const eventsDelete = (
     input: EventDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "EventDelete",
+        _tag: 'EventDelete',
         opId: randomUUID(),
         eventId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run(
-            "update events set deleted_at_ms = ?, updated_at_ms = ? where id = ?",
-            [deletedAtMs, deletedAtMs, id]
-          )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .run('update events set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
+            deletedAtMs,
+            deletedAtMs,
+            id
+          ])
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const eventDaysList = ({
-    eventId,
-  }: EventDayListQuery): Effect.Effect<
-    ReadonlyArray<EventDay>,
-    LocalDbQueryError
-  > => {
+    eventId
+  }: EventDayListQuery): Effect.Effect<ReadonlyArray<EventDay>, LocalDbQueryError> => {
     const filter = [
-      "deleted_at_ms is null",
-      typeof eventId === "string" ? "event_id = ?" : null,
-    ].filter((value): value is string => typeof value === "string")
+      'deleted_at_ms is null',
+      typeof eventId === 'string' ? 'event_id = ?' : null
+    ].filter((value): value is string => typeof value === 'string')
 
-    const where = filter.length > 0 ? `where ${filter.join(" and ")}` : ""
-    const params = typeof eventId === "string" ? [eventId] : []
+    const where = filter.length > 0 ? `where ${filter.join(' and ')}` : ''
+    const params = typeof eventId === 'string' ? [eventId] : []
 
     return db.all(
       `
@@ -462,13 +449,13 @@ order by day_number asc
         dateMs: input.dateMs,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "EventDayUpsert",
+        _tag: 'EventDayUpsert',
         opId: randomUUID(),
-        eventDay,
+        eventDay
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -494,13 +481,10 @@ on conflict(id) do update set
               eventDay.dateMs,
               eventDay.updatedAtMs,
               eventDay.deletedAtMs,
-              eventDay.serverModifiedAtMs,
+              eventDay.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return eventDay
@@ -518,13 +502,13 @@ on conflict(id) do update set
         dateMs: input.dateMs,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "EventDayUpsert",
+        _tag: 'EventDayUpsert',
         opId: randomUUID(),
-        eventDay,
+        eventDay
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -550,13 +534,10 @@ on conflict(id) do update set
               eventDay.dateMs,
               eventDay.updatedAtMs,
               eventDay.deletedAtMs,
-              eventDay.serverModifiedAtMs,
+              eventDay.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return eventDay
@@ -564,52 +545,46 @@ on conflict(id) do update set
 
   const eventDaysDelete = (
     input: EventDayDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "EventDayDelete",
+        _tag: 'EventDayDelete',
         opId: randomUUID(),
         eventDayId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run("update event_days set deleted_at_ms = ?, updated_at_ms = ? where id = ?", [
+          .run('update event_days set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
             deletedAtMs,
             deletedAtMs,
-            id,
+            id
           ])
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const eventAttendeesList = ({
     eventId,
-    personId,
-  }: EventAttendeeListQuery): Effect.Effect<
-    ReadonlyArray<EventAttendee>,
-    LocalDbQueryError
-  > => {
+    personId
+  }: EventAttendeeListQuery): Effect.Effect<ReadonlyArray<EventAttendee>, LocalDbQueryError> => {
     const filter = [
-      "deleted_at_ms is null",
-      typeof eventId === "string" ? "event_id = ?" : null,
-      typeof personId === "string" ? "person_id = ?" : null,
-    ].filter((value): value is string => typeof value === "string")
+      'deleted_at_ms is null',
+      typeof eventId === 'string' ? 'event_id = ?' : null,
+      typeof personId === 'string' ? 'person_id = ?' : null
+    ].filter((value): value is string => typeof value === 'string')
 
-    const where = filter.length > 0 ? `where ${filter.join(" and ")}` : ""
+    const where = filter.length > 0 ? `where ${filter.join(' and ')}` : ''
     const params = [
-      ...(typeof eventId === "string" ? [eventId] : []),
-      ...(typeof personId === "string" ? [personId] : []),
+      ...(typeof eventId === 'string' ? [eventId] : []),
+      ...(typeof personId === 'string' ? [personId] : [])
     ]
 
     return db.all(
@@ -657,13 +632,13 @@ order by updated_at_ms desc
         attendanceOverrideNote: input.attendanceOverrideNote,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "EventAttendeeUpsert",
+        _tag: 'EventAttendeeUpsert',
         opId: randomUUID(),
-        attendee,
+        attendee
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -716,13 +691,10 @@ on conflict(id) do update set
               attendee.attendanceOverrideNote,
               attendee.updatedAtMs,
               attendee.deletedAtMs,
-              attendee.serverModifiedAtMs,
+              attendee.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return attendee
@@ -747,13 +719,13 @@ on conflict(id) do update set
         attendanceOverrideNote: input.attendanceOverrideNote,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "EventAttendeeUpsert",
+        _tag: 'EventAttendeeUpsert',
         opId: randomUUID(),
-        attendee,
+        attendee
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -806,13 +778,10 @@ on conflict(id) do update set
               attendee.attendanceOverrideNote,
               attendee.updatedAtMs,
               attendee.deletedAtMs,
-              attendee.serverModifiedAtMs,
+              attendee.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return attendee
@@ -820,54 +789,49 @@ on conflict(id) do update set
 
   const eventAttendeesDelete = (
     input: EventAttendeeDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "EventAttendeeDelete",
+        _tag: 'EventAttendeeDelete',
         opId: randomUUID(),
         attendeeId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run(
-            "update event_attendees set deleted_at_ms = ?, updated_at_ms = ? where id = ?",
-            [deletedAtMs, deletedAtMs, id]
-          )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .run('update event_attendees set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
+            deletedAtMs,
+            deletedAtMs,
+            id
+          ])
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const attendanceList = ({
     eventId,
     eventDayId,
-    eventAttendeeId,
-  }: AttendanceListQuery): Effect.Effect<
-    ReadonlyArray<Attendance>,
-    LocalDbQueryError
-  > => {
+    eventAttendeeId
+  }: AttendanceListQuery): Effect.Effect<ReadonlyArray<Attendance>, LocalDbQueryError> => {
     const filter = [
-      "eda.deleted_at_ms is null",
-      typeof eventId === "string" ? "ed.event_id = ?" : null,
-      typeof eventDayId === "string" ? "eda.event_day_id = ?" : null,
-      typeof eventAttendeeId === "string" ? "eda.event_attendee_id = ?" : null,
-    ].filter((value): value is string => typeof value === "string")
+      'eda.deleted_at_ms is null',
+      typeof eventId === 'string' ? 'ed.event_id = ?' : null,
+      typeof eventDayId === 'string' ? 'eda.event_day_id = ?' : null,
+      typeof eventAttendeeId === 'string' ? 'eda.event_attendee_id = ?' : null
+    ].filter((value): value is string => typeof value === 'string')
 
-    const where = filter.length > 0 ? `where ${filter.join(" and ")}` : ""
+    const where = filter.length > 0 ? `where ${filter.join(' and ')}` : ''
     const params = [
-      ...(typeof eventId === "string" ? [eventId] : []),
-      ...(typeof eventDayId === "string" ? [eventDayId] : []),
-      ...(typeof eventAttendeeId === "string" ? [eventAttendeeId] : []),
+      ...(typeof eventId === 'string' ? [eventId] : []),
+      ...(typeof eventDayId === 'string' ? [eventDayId] : []),
+      ...(typeof eventAttendeeId === 'string' ? [eventAttendeeId] : [])
     ]
 
     return db.all(
@@ -906,13 +870,13 @@ order by eda.updated_at_ms desc
         checkedInBy: input.checkedInBy,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "AttendanceUpsert",
+        _tag: 'AttendanceUpsert',
         opId: randomUUID(),
-        attendance,
+        attendance
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -950,13 +914,10 @@ on conflict(id) do update set
               attendance.checkedInBy,
               attendance.updatedAtMs,
               attendance.deletedAtMs,
-              attendance.serverModifiedAtMs,
+              attendance.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return attendance
@@ -976,13 +937,13 @@ on conflict(id) do update set
         checkedInBy: input.checkedInBy,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "AttendanceUpsert",
+        _tag: 'AttendanceUpsert',
         opId: randomUUID(),
-        attendance,
+        attendance
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1020,13 +981,10 @@ on conflict(id) do update set
               attendance.checkedInBy,
               attendance.updatedAtMs,
               attendance.deletedAtMs,
-              attendance.serverModifiedAtMs,
+              attendance.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return attendance
@@ -1034,15 +992,15 @@ on conflict(id) do update set
 
   const attendanceDelete = (
     input: AttendanceDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "AttendanceDelete",
+        _tag: 'AttendanceDelete',
         opId: randomUUID(),
         attendanceId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1050,35 +1008,26 @@ on conflict(id) do update set
       yield* db.transaction((tx) =>
         tx
           .run(
-            "update event_day_attendance set deleted_at_ms = ?, updated_at_ms = ? where id = ?",
+            'update event_day_attendance set deleted_at_ms = ?, updated_at_ms = ? where id = ?',
             [deletedAtMs, deletedAtMs, id]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const personsList = ({
-    query,
+    query
   }: PersonListQuery): Effect.Effect<ReadonlyArray<Person>, LocalDbQueryError> => {
     const where =
-      typeof query === "string"
+      typeof query === 'string'
         ? "where deleted_at_ms is null and (first_name like ? escape '~' or last_name like ? escape '~' or email like ? escape '~' or phone1 like ? escape '~' or phone2 like ? escape '~')"
-        : "where deleted_at_ms is null"
+        : 'where deleted_at_ms is null'
 
     const params =
-      typeof query === "string"
-        ? [
-            likeQuery(query),
-            likeQuery(query),
-            likeQuery(query),
-            likeQuery(query),
-            likeQuery(query),
-          ]
+      typeof query === 'string'
+        ? [likeQuery(query), likeQuery(query), likeQuery(query), likeQuery(query), likeQuery(query)]
         : []
 
     return db.all(
@@ -1158,13 +1107,13 @@ order by last_name asc, first_name asc
         photoId: null,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "PersonUpsert",
+        _tag: 'PersonUpsert',
         opId: randomUUID(),
-        person,
+        person
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1265,13 +1214,10 @@ on conflict(id) do update set
               person.photoId,
               person.updatedAtMs,
               person.deletedAtMs,
-              person.serverModifiedAtMs,
+              person.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return person
@@ -1312,13 +1258,13 @@ on conflict(id) do update set
         photoId: input.photoId,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "PersonUpsert",
+        _tag: 'PersonUpsert',
         opId: randomUUID(),
-        person,
+        person
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1390,13 +1336,10 @@ where id = ?
               person.updatedAtMs,
               person.deletedAtMs,
               person.serverModifiedAtMs,
-              person.id,
+              person.id
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return person
@@ -1404,47 +1347,41 @@ where id = ?
 
   const personsDelete = (
     input: PersonDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "PersonDelete",
+        _tag: 'PersonDelete',
         opId: randomUUID(),
         personId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run("update persons set deleted_at_ms = ?, updated_at_ms = ? where id = ?", [
+          .run('update persons set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
             deletedAtMs,
             deletedAtMs,
-            id,
+            id
           ])
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const groupsList = ({
-    query,
+    query
   }: GroupListQuery): Effect.Effect<ReadonlyArray<Group>, LocalDbQueryError> => {
     const where =
-      typeof query === "string"
+      typeof query === 'string'
         ? "where deleted_at_ms is null and (name like ? escape '~' or description like ? escape '~')"
-        : "where deleted_at_ms is null"
+        : 'where deleted_at_ms is null'
 
-    const params =
-      typeof query === "string"
-        ? [likeQuery(query), likeQuery(query)]
-        : []
+    const params = typeof query === 'string' ? [likeQuery(query), likeQuery(query)] : []
 
     return db.all(
       `
@@ -1475,13 +1412,13 @@ order by name asc
         description: input.description,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "GroupUpsert",
+        _tag: 'GroupUpsert',
         opId: randomUUID(),
-        group,
+        group
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1505,13 +1442,10 @@ on conflict(id) do update set
               group.description,
               group.updatedAtMs,
               group.deletedAtMs,
-              group.serverModifiedAtMs,
+              group.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return group
@@ -1528,13 +1462,13 @@ on conflict(id) do update set
         description: input.description,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "GroupUpsert",
+        _tag: 'GroupUpsert',
         opId: randomUUID(),
-        group,
+        group
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1558,13 +1492,10 @@ on conflict(id) do update set
               group.description,
               group.updatedAtMs,
               group.deletedAtMs,
-              group.serverModifiedAtMs,
+              group.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return group
@@ -1572,52 +1503,46 @@ on conflict(id) do update set
 
   const groupsDelete = (
     input: GroupDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "GroupDelete",
+        _tag: 'GroupDelete',
         opId: randomUUID(),
         groupId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run("update groups set deleted_at_ms = ?, updated_at_ms = ? where id = ?", [
+          .run('update groups set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
             deletedAtMs,
             deletedAtMs,
-            id,
+            id
           ])
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const personGroupsList = ({
     groupId,
-    personId,
-  }: PersonGroupListQuery): Effect.Effect<
-    ReadonlyArray<PersonGroup>,
-    LocalDbQueryError
-  > => {
+    personId
+  }: PersonGroupListQuery): Effect.Effect<ReadonlyArray<PersonGroup>, LocalDbQueryError> => {
     const filter = [
-      "deleted_at_ms is null",
-      typeof groupId === "string" ? "group_id = ?" : null,
-      typeof personId === "string" ? "person_id = ?" : null,
-    ].filter((value): value is string => typeof value === "string")
+      'deleted_at_ms is null',
+      typeof groupId === 'string' ? 'group_id = ?' : null,
+      typeof personId === 'string' ? 'person_id = ?' : null
+    ].filter((value): value is string => typeof value === 'string')
 
-    const where = filter.length > 0 ? `where ${filter.join(" and ")}` : ""
+    const where = filter.length > 0 ? `where ${filter.join(' and ')}` : ''
     const params = [
-      ...(typeof groupId === "string" ? [groupId] : []),
-      ...(typeof personId === "string" ? [personId] : []),
+      ...(typeof groupId === 'string' ? [groupId] : []),
+      ...(typeof personId === 'string' ? [personId] : [])
     ]
 
     return db.all(
@@ -1651,13 +1576,13 @@ order by updated_at_ms desc
         joinedAtMs: input.joinedAtMs,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "PersonGroupUpsert",
+        _tag: 'PersonGroupUpsert',
         opId: randomUUID(),
-        personGroup,
+        personGroup
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1683,13 +1608,10 @@ on conflict(id) do update set
               personGroup.joinedAtMs,
               personGroup.updatedAtMs,
               personGroup.deletedAtMs,
-              personGroup.serverModifiedAtMs,
+              personGroup.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return personGroup
@@ -1707,13 +1629,13 @@ on conflict(id) do update set
         joinedAtMs: input.joinedAtMs,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "PersonGroupUpsert",
+        _tag: 'PersonGroupUpsert',
         opId: randomUUID(),
-        personGroup,
+        personGroup
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1739,13 +1661,10 @@ on conflict(id) do update set
               personGroup.joinedAtMs,
               personGroup.updatedAtMs,
               personGroup.deletedAtMs,
-              personGroup.serverModifiedAtMs,
+              personGroup.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return personGroup
@@ -1753,49 +1672,41 @@ on conflict(id) do update set
 
   const personGroupsDelete = (
     input: PersonGroupDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "PersonGroupDelete",
+        _tag: 'PersonGroupDelete',
         opId: randomUUID(),
         personGroupId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run(
-            "update person_groups set deleted_at_ms = ?, updated_at_ms = ? where id = ?",
-            [deletedAtMs, deletedAtMs, id]
-          )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .run('update person_groups set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
+            deletedAtMs,
+            deletedAtMs,
+            id
+          ])
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const empowermentsList = ({
-    query,
-  }: EmpowermentListQuery): Effect.Effect<
-    ReadonlyArray<Empowerment>,
-    LocalDbQueryError
-  > => {
+    query
+  }: EmpowermentListQuery): Effect.Effect<ReadonlyArray<Empowerment>, LocalDbQueryError> => {
     const where =
-      typeof query === "string"
+      typeof query === 'string'
         ? "where deleted_at_ms is null and (name like ? escape '~' or description like ? escape '~')"
-        : "where deleted_at_ms is null"
+        : 'where deleted_at_ms is null'
 
-    const params =
-      typeof query === "string"
-        ? [likeQuery(query), likeQuery(query)]
-        : []
+    const params = typeof query === 'string' ? [likeQuery(query), likeQuery(query)] : []
 
     return db.all(
       `
@@ -1836,13 +1747,13 @@ order by name asc
         majorEmpowerment: input.majorEmpowerment,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "EmpowermentUpsert",
+        _tag: 'EmpowermentUpsert',
         opId: randomUUID(),
-        empowerment,
+        empowerment
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1886,13 +1797,10 @@ on conflict(id) do update set
               toSqliteBoolean(empowerment.majorEmpowerment),
               empowerment.updatedAtMs,
               empowerment.deletedAtMs,
-              empowerment.serverModifiedAtMs,
+              empowerment.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return empowerment
@@ -1914,13 +1822,13 @@ on conflict(id) do update set
         majorEmpowerment: input.majorEmpowerment,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "EmpowermentUpsert",
+        _tag: 'EmpowermentUpsert',
         opId: randomUUID(),
-        empowerment,
+        empowerment
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -1964,13 +1872,10 @@ on conflict(id) do update set
               toSqliteBoolean(empowerment.majorEmpowerment),
               empowerment.updatedAtMs,
               empowerment.deletedAtMs,
-              empowerment.serverModifiedAtMs,
+              empowerment.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return empowerment
@@ -1978,43 +1883,41 @@ on conflict(id) do update set
 
   const empowermentsDelete = (
     input: EmpowermentDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "EmpowermentDelete",
+        _tag: 'EmpowermentDelete',
         opId: randomUUID(),
         empowermentId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run(
-            "update empowerments set deleted_at_ms = ?, updated_at_ms = ? where id = ?",
-            [deletedAtMs, deletedAtMs, id]
-          )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .run('update empowerments set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
+            deletedAtMs,
+            deletedAtMs,
+            id
+          ])
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const gurusList = ({
-    query,
+    query
   }: GuruListQuery): Effect.Effect<ReadonlyArray<Guru>, LocalDbQueryError> => {
     const where =
-      typeof query === "string"
+      typeof query === 'string'
         ? "where deleted_at_ms is null and name like ? escape '~'"
-        : "where deleted_at_ms is null"
+        : 'where deleted_at_ms is null'
 
-    const params = typeof query === "string" ? [likeQuery(query)] : []
+    const params = typeof query === 'string' ? [likeQuery(query)] : []
 
     return db.all(
       `
@@ -2043,13 +1946,13 @@ order by name asc
         name: input.name,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "GuruUpsert",
+        _tag: 'GuruUpsert',
         opId: randomUUID(),
-        guru,
+        guru
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -2066,18 +1969,9 @@ on conflict(id) do update set
   updated_at_ms = excluded.updated_at_ms,
   deleted_at_ms = excluded.deleted_at_ms
 `,
-            [
-              guru.id,
-              guru.name,
-              guru.updatedAtMs,
-              guru.deletedAtMs,
-              guru.serverModifiedAtMs,
-            ]
+            [guru.id, guru.name, guru.updatedAtMs, guru.deletedAtMs, guru.serverModifiedAtMs]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return guru
@@ -2093,13 +1987,13 @@ on conflict(id) do update set
         name: input.name,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "GuruUpsert",
+        _tag: 'GuruUpsert',
         opId: randomUUID(),
-        guru,
+        guru
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -2116,18 +2010,9 @@ on conflict(id) do update set
   updated_at_ms = excluded.updated_at_ms,
   deleted_at_ms = excluded.deleted_at_ms
 `,
-            [
-              guru.id,
-              guru.name,
-              guru.updatedAtMs,
-              guru.deletedAtMs,
-              guru.serverModifiedAtMs,
-            ]
+            [guru.id, guru.name, guru.updatedAtMs, guru.deletedAtMs, guru.serverModifiedAtMs]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return guru
@@ -2135,50 +2020,41 @@ on conflict(id) do update set
 
   const gurusDelete = (
     input: GuruDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "GuruDelete",
+        _tag: 'GuruDelete',
         opId: randomUUID(),
         guruId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run("update gurus set deleted_at_ms = ?, updated_at_ms = ? where id = ?", [
+          .run('update gurus set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
             deletedAtMs,
             deletedAtMs,
-            id,
+            id
           ])
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const mahakramaStepsList = ({
-    query,
-  }: MahakramaStepListQuery): Effect.Effect<
-    ReadonlyArray<MahakramaStep>,
-    LocalDbQueryError
-  > => {
+    query
+  }: MahakramaStepListQuery): Effect.Effect<ReadonlyArray<MahakramaStep>, LocalDbQueryError> => {
     const where =
-      typeof query === "string"
+      typeof query === 'string'
         ? "where deleted_at_ms is null and (step_name like ? escape '~' or group_name like ? escape '~')"
-        : "where deleted_at_ms is null"
+        : 'where deleted_at_ms is null'
 
-    const params =
-      typeof query === "string"
-        ? [likeQuery(query), likeQuery(query)]
-        : []
+    const params = typeof query === 'string' ? [likeQuery(query), likeQuery(query)] : []
 
     return db.all(
       `
@@ -2217,13 +2093,13 @@ order by sequence_number asc
         description: input.description,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "MahakramaStepUpsert",
+        _tag: 'MahakramaStepUpsert',
         opId: randomUUID(),
-        mahakramaStep: step,
+        mahakramaStep: step
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -2264,13 +2140,10 @@ on conflict(id) do update set
               step.description,
               step.updatedAtMs,
               step.deletedAtMs,
-              step.serverModifiedAtMs,
+              step.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return step
@@ -2291,13 +2164,13 @@ on conflict(id) do update set
         description: input.description,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "MahakramaStepUpsert",
+        _tag: 'MahakramaStepUpsert',
         opId: randomUUID(),
-        mahakramaStep: step,
+        mahakramaStep: step
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -2338,13 +2211,10 @@ on conflict(id) do update set
               step.description,
               step.updatedAtMs,
               step.deletedAtMs,
-              step.serverModifiedAtMs,
+              step.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return step
@@ -2352,47 +2222,45 @@ on conflict(id) do update set
 
   const mahakramaStepsDelete = (
     input: MahakramaStepDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "MahakramaStepDelete",
+        _tag: 'MahakramaStepDelete',
         opId: randomUUID(),
         mahakramaStepId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run(
-            "update mahakrama_steps set deleted_at_ms = ?, updated_at_ms = ? where id = ?",
-            [deletedAtMs, deletedAtMs, id]
-          )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .run('update mahakrama_steps set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
+            deletedAtMs,
+            deletedAtMs,
+            id
+          ])
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const mahakramaHistoryList = ({
-    personId,
+    personId
   }: MahakramaHistoryListQuery): Effect.Effect<
     ReadonlyArray<MahakramaHistory>,
     LocalDbQueryError
   > => {
     const filter = [
-      "deleted_at_ms is null",
-      typeof personId === "string" ? "person_id = ?" : null,
-    ].filter((value): value is string => typeof value === "string")
+      'deleted_at_ms is null',
+      typeof personId === 'string' ? 'person_id = ?' : null
+    ].filter((value): value is string => typeof value === 'string')
 
-    const where = filter.length > 0 ? `where ${filter.join(" and ")}` : ""
-    const params = typeof personId === "string" ? [personId] : []
+    const where = filter.length > 0 ? `where ${filter.join(' and ')}` : ''
+    const params = typeof personId === 'string' ? [personId] : []
 
     return db.all(
       `
@@ -2433,13 +2301,13 @@ order by start_date_ms desc
         completionNotes: input.completionNotes,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "MahakramaHistoryUpsert",
+        _tag: 'MahakramaHistoryUpsert',
         opId: randomUUID(),
-        mahakramaHistory: history,
+        mahakramaHistory: history
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -2483,13 +2351,10 @@ on conflict(id) do update set
               history.completionNotes,
               history.updatedAtMs,
               history.deletedAtMs,
-              history.serverModifiedAtMs,
+              history.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return history
@@ -2511,13 +2376,13 @@ on conflict(id) do update set
         completionNotes: input.completionNotes,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const syncOp = {
-        _tag: "MahakramaHistoryUpsert",
+        _tag: 'MahakramaHistoryUpsert',
         opId: randomUUID(),
-        mahakramaHistory: history,
+        mahakramaHistory: history
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
@@ -2561,13 +2426,10 @@ on conflict(id) do update set
               history.completionNotes,
               history.updatedAtMs,
               history.deletedAtMs,
-              history.serverModifiedAtMs,
+              history.serverModifiedAtMs
             ]
           )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
       return history
@@ -2575,32 +2437,30 @@ on conflict(id) do update set
 
   const mahakramaHistoryDelete = (
     input: MahakramaHistoryDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "MahakramaHistoryDelete",
+        _tag: 'MahakramaHistoryDelete',
         opId: randomUUID(),
         mahakramaHistoryId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run(
-            "update mahakrama_history set deleted_at_ms = ?, updated_at_ms = ? where id = ?",
-            [deletedAtMs, deletedAtMs, id]
-          )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .run('update mahakrama_history set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
+            deletedAtMs,
+            deletedAtMs,
+            id
+          ])
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
   const photosCreate = (
@@ -2615,13 +2475,13 @@ on conflict(id) do update set
         bytes: input.bytes,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const photoSyncOp = {
-        _tag: "PhotoUpsert",
+        _tag: 'PhotoUpsert',
         opId: randomUUID(),
-        photo,
+        photo
       } as const
 
       const photoOpJson = yield* encodeSyncOperationJson(photoSyncOp)
@@ -2663,9 +2523,9 @@ where id = ?
       if (Option.isNone(updatedPerson)) {
         return yield* Effect.fail(
           new EntityNotFoundError({
-            message: "Person not found",
-            entity: "Person",
-            id: input.personId,
+            message: 'Person not found',
+            entity: 'Person',
+            id: input.personId
           })
         )
       }
@@ -2675,13 +2535,13 @@ where id = ?
         photoId: photo.id,
         updatedAtMs: nowMs(),
         deletedAtMs: null,
-        serverModifiedAtMs: null,
+        serverModifiedAtMs: null
       }
 
       const personSyncOp = {
-        _tag: "PersonUpsert",
+        _tag: 'PersonUpsert',
         opId: randomUUID(),
-        person,
+        person
       } as const
 
       const personOpJson = yield* encodeSyncOperationJson(personSyncOp)
@@ -2707,17 +2567,18 @@ on conflict(id) do update set
               photo.bytes,
               photo.updatedAtMs,
               photo.deletedAtMs,
-              photo.serverModifiedAtMs,
+              photo.serverModifiedAtMs
             ]
           )
           .pipe(
             Effect.asVoid,
             Effect.zipRight(
               tx
-                .run(
-                  "update persons set photo_id = ?, updated_at_ms = ? where id = ?",
-                  [photo.id, person.updatedAtMs, person.id]
-                )
+                .run('update persons set photo_id = ?, updated_at_ms = ? where id = ?', [
+                  photo.id,
+                  person.updatedAtMs,
+                  person.id
+                ])
                 .pipe(Effect.asVoid)
             ),
             Effect.zipRight(insertOutbox(tx, photoSyncOp.opId, photoOpJson)),
@@ -2730,38 +2591,33 @@ on conflict(id) do update set
 
   const photosDelete = (
     input: PhotoDeleteInput
-  ): Effect.Effect<"ok", LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<'ok', LocalDbQueryError | OutboxEncodeError> =>
     Effect.gen(function* () {
       const { id } = input
       const deletedAtMs = nowMs()
       const syncOp = {
-        _tag: "PhotoDelete",
+        _tag: 'PhotoDelete',
         opId: randomUUID(),
         photoId: id,
-        deletedAtMs,
+        deletedAtMs
       } as const
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
         tx
-          .run("update photos set deleted_at_ms = ?, updated_at_ms = ? where id = ?", [
+          .run('update photos set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
             deletedAtMs,
             deletedAtMs,
-            id,
+            id
           ])
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
-          )
+          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
       )
 
-      return "ok" as const
+      return 'ok' as const
     })
 
-  const photosGet = (
-    id: string
-  ): Effect.Effect<Photo, LocalDbQueryError | EntityNotFoundError> =>
+  const photosGet = (id: string): Effect.Effect<Photo, LocalDbQueryError | EntityNotFoundError> =>
     Effect.gen(function* () {
       const row = yield* db.get(
         `
@@ -2782,7 +2638,7 @@ where id = ?
 
       if (Option.isNone(row)) {
         return yield* Effect.fail(
-          new EntityNotFoundError({ message: "Photo not found", entity: "Photo", id })
+          new EntityNotFoundError({ message: 'Photo not found', entity: 'Photo', id })
         )
       }
 
@@ -2836,11 +2692,11 @@ where id = ?
     mahakramaHistoryDelete,
     photosCreate,
     photosDelete,
-    photosGet,
+    photosGet
   } as const
 })
 
-export class DataService extends Effect.Service<DataService>()("services/DataService", {
+export class DataService extends Effect.Service<DataService>()('services/DataService', {
   dependencies: [LocalDbService.Default],
-  effect: makeDataService,
+  effect: makeDataService
 }) {}

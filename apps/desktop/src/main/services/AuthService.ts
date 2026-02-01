@@ -1,84 +1,79 @@
-import { app, safeStorage } from "electron"
-import { join } from "node:path"
+import { app, safeStorage } from 'electron'
+import { join } from 'node:path'
 import {
   FetchHttpClient,
   FileSystem,
   HttpClient,
   HttpClientRequest,
-  HttpClientResponse,
-} from "@effect/platform"
-import { NodeFileSystem } from "@effect/platform-node"
-import { Effect, Either, Option, Schema } from "effect"
-import { AuthSessionSchema, type AuthSession } from "@satori/api-contract/api/auth/auth-model"
-import { BadRequest, InternalServerError, Unauthorized } from "@satori/api-contract/api/http-errors"
+  HttpClientResponse
+} from '@effect/platform'
+import { NodeFileSystem } from '@effect/platform-node'
+import { Effect, Either, Option, Schema } from 'effect'
+import { AuthSessionSchema, type AuthSession } from '@satori/api-contract/api/auth/auth-model'
+import { BadRequest, InternalServerError, Unauthorized } from '@satori/api-contract/api/http-errors'
 import {
   AuthSignInRequestSchema,
   UserRoleSchema,
   type AuthSignInRequest,
-  type AuthState,
-} from "@satori/domain/auth/schemas"
+  type AuthState
+} from '@satori/domain/auth/schemas'
 import {
   AuthStorageError,
   ApiAuthError,
   ApiConfigError,
   LockedError,
-  UnauthorizedError,
-} from "../errors"
-import type { ApiConfig } from "../utils/apiConfig"
-import { getApiConfig } from "../utils/apiConfig"
+  UnauthorizedError
+} from '../errors'
+import type { ApiConfig } from '../utils/apiConfig'
+import { getApiConfig } from '../utils/apiConfig'
 
 const StoredSessionSchema = Schema.Struct({
   accessToken: Schema.String,
   userId: Schema.String,
   email: Schema.String,
   role: UserRoleSchema,
-  expiresAtMs: Schema.Number,
+  expiresAtMs: Schema.Number
 })
 
 type StoredSession = Schema.Schema.Type<typeof StoredSessionSchema>
 
 class SafeStorageEncryptError extends Schema.TaggedError<SafeStorageEncryptError>(
-  "SafeStorageEncryptError"
-)("SafeStorageEncryptError", {
-  cause: Schema.Unknown,
+  'SafeStorageEncryptError'
+)('SafeStorageEncryptError', {
+  cause: Schema.Unknown
 }) {}
 
 class SafeStorageDecryptError extends Schema.TaggedError<SafeStorageDecryptError>(
-  "SafeStorageDecryptError"
-)("SafeStorageDecryptError", {
-  cause: Schema.Unknown,
+  'SafeStorageDecryptError'
+)('SafeStorageDecryptError', {
+  cause: Schema.Unknown
 }) {}
 
-const authSessionFilePath = (): string =>
-  join(app.getPath("userData"), "auth.session")
+const authSessionFilePath = (): string => join(app.getPath('userData'), 'auth.session')
 
 const encryptSessionText = (text: string): Effect.Effect<string, never> =>
   !safeStorage.isEncryptionAvailable()
     ? Effect.succeed(text)
     : Effect.try({
-        try: () => safeStorage.encryptString(text).toString("base64"),
-        catch: (cause) => new SafeStorageEncryptError({ cause }),
-      }).pipe(
-        Effect.catchTag("SafeStorageEncryptError", () => Effect.succeed(text))
-      )
+        try: () => safeStorage.encryptString(text).toString('base64'),
+        catch: (cause) => new SafeStorageEncryptError({ cause })
+      }).pipe(Effect.catchTag('SafeStorageEncryptError', () => Effect.succeed(text)))
 
 const decryptSessionText = (text: string): Effect.Effect<string, never> =>
   !safeStorage.isEncryptionAvailable()
     ? Effect.succeed(text)
     : Effect.try({
-        try: () => safeStorage.decryptString(Buffer.from(text, "base64")),
-        catch: (cause) => new SafeStorageDecryptError({ cause }),
-      }).pipe(
-        Effect.catchTag("SafeStorageDecryptError", () => Effect.succeed(text))
-      )
+        try: () => safeStorage.decryptString(Buffer.from(text, 'base64')),
+        catch: (cause) => new SafeStorageDecryptError({ cause })
+      }).pipe(Effect.catchTag('SafeStorageDecryptError', () => Effect.succeed(text)))
 
 const deleteSessionFileIgnoringErrors = (
   fs: FileSystem.FileSystem,
   filePath: string
 ): Effect.Effect<void, never> =>
   fs.remove(filePath, { force: true }).pipe(
-    Effect.catchTag("BadArgument", () => Effect.void),
-    Effect.catchTag("SystemError", () => Effect.void)
+    Effect.catchTag('BadArgument', () => Effect.void),
+    Effect.catchTag('SystemError', () => Effect.void)
   )
 
 const loadStoredSession = (
@@ -86,41 +81,36 @@ const loadStoredSession = (
 ): Effect.Effect<Option.Option<StoredSession>, AuthStorageError> => {
   const filePath = authSessionFilePath()
 
-  const decodeStoredSession =
-    Schema.decodeUnknownEither(Schema.parseJson(StoredSessionSchema))
+  const decodeStoredSession = Schema.decodeUnknownEither(Schema.parseJson(StoredSessionSchema))
 
-  return fs
-    .readFileString(filePath, "utf8")
-    .pipe(
-      Effect.map(Option.some),
-      Effect.catchTag("SystemError", (error) =>
-        error.reason === "NotFound" ? Effect.succeed(Option.none()) : Effect.fail(error)
-      ),
-      Effect.mapError(
-        (cause) =>
-          new AuthStorageError({
-            message: "Failed to read auth session",
-            path: filePath,
-            cause,
-          })
-      ),
-      Effect.flatMap((encryptedText) =>
-        Option.match(encryptedText, {
-          onNone: () => Effect.succeed(Option.none()),
-          onSome: (text) =>
-            decryptSessionText(text).pipe(
-              Effect.flatMap((decrypted) => {
-                const decoded = decodeStoredSession(decrypted)
-                return Either.isLeft(decoded)
-                  ? deleteSessionFileIgnoringErrors(fs, filePath).pipe(
-                      Effect.as(Option.none())
-                    )
-                  : Effect.succeed(Option.some(decoded.right))
-              })
-            ),
+  return fs.readFileString(filePath, 'utf8').pipe(
+    Effect.map(Option.some),
+    Effect.catchTag('SystemError', (error) =>
+      error.reason === 'NotFound' ? Effect.succeed(Option.none()) : Effect.fail(error)
+    ),
+    Effect.mapError(
+      (cause) =>
+        new AuthStorageError({
+          message: 'Failed to read auth session',
+          path: filePath,
+          cause
         })
-      )
+    ),
+    Effect.flatMap((encryptedText) =>
+      Option.match(encryptedText, {
+        onNone: () => Effect.succeed(Option.none()),
+        onSome: (text) =>
+          decryptSessionText(text).pipe(
+            Effect.flatMap((decrypted) => {
+              const decoded = decodeStoredSession(decrypted)
+              return Either.isLeft(decoded)
+                ? deleteSessionFileIgnoringErrors(fs, filePath).pipe(Effect.as(Option.none()))
+                : Effect.succeed(Option.some(decoded.right))
+            })
+          )
+      })
     )
+  )
 }
 
 const saveStoredSession = (
@@ -136,18 +126,16 @@ const saveStoredSession = (
       Effect.mapError(
         (cause) =>
           new AuthStorageError({
-            message: "Failed to write auth session",
+            message: 'Failed to write auth session',
             path: filePath,
-            cause,
+            cause
           })
       )
     )
   })
 }
 
-const deleteStoredSession = (
-  fs: FileSystem.FileSystem
-): Effect.Effect<void, AuthStorageError> => {
+const deleteStoredSession = (fs: FileSystem.FileSystem): Effect.Effect<void, AuthStorageError> => {
   const filePath = authSessionFilePath()
 
   return Effect.gen(function* () {
@@ -155,9 +143,9 @@ const deleteStoredSession = (
       Effect.mapError(
         (cause) =>
           new AuthStorageError({
-            message: "Failed to delete auth session",
+            message: 'Failed to delete auth session',
             path: filePath,
-            cause,
+            cause
           })
       )
     )
@@ -165,25 +153,22 @@ const deleteStoredSession = (
 }
 
 const lockStateFromSession = (session: StoredSession): AuthState => ({
-  _tag: "Locked",
-  reason: "TokenExpired",
-  email: session.email,
+  _tag: 'Locked',
+  reason: 'TokenExpired',
+  email: session.email
 })
 
-const unauthenticatedState: AuthState = { _tag: "Unauthenticated" }
+const unauthenticatedState: AuthState = { _tag: 'Unauthenticated' }
 
 const authenticatedStateFromSession = (session: StoredSession): AuthState => ({
-  _tag: "Authenticated",
+  _tag: 'Authenticated',
   userId: session.userId,
   email: session.email,
   role: session.role,
-  expiresAtMs: session.expiresAtMs,
+  expiresAtMs: session.expiresAtMs
 })
 
-const authStateFromStoredSession = (
-  session: StoredSession,
-  nowMs: number
-): AuthState =>
+const authStateFromStoredSession = (session: StoredSession, nowMs: number): AuthState =>
   session.expiresAtMs <= nowMs
     ? lockStateFromSession(session)
     : authenticatedStateFromSession(session)
@@ -205,9 +190,9 @@ const authSignInRequest = (
       Effect.mapError(
         (cause) =>
           new ApiAuthError({
-            message: "Invalid sign-in request",
+            message: 'Invalid sign-in request',
             statusCode: 0,
-            cause,
+            cause
           })
       )
     )
@@ -216,22 +201,22 @@ const authSignInRequest = (
       Effect.mapError(
         (cause) =>
           new ApiAuthError({
-            message: "Network error",
+            message: 'Network error',
             statusCode: 0,
-            cause,
+            cause
           })
       )
     )
 
     return yield* HttpClientResponse.matchStatus(response, {
-      "2xx": (ok) =>
+      '2xx': (ok) =>
         HttpClientResponse.schemaBodyJson(AuthSessionSchema)(ok).pipe(
           Effect.mapError(
             (cause) =>
               new ApiAuthError({
-                message: "Invalid auth response from API",
+                message: 'Invalid auth response from API',
                 statusCode: ok.status,
-                cause,
+                cause
               })
           )
         ),
@@ -240,9 +225,9 @@ const authSignInRequest = (
           Effect.mapError(
             (cause) =>
               new ApiAuthError({
-                message: "Invalid error response from API",
+                message: 'Invalid error response from API',
                 statusCode: notOk.status,
-                cause,
+                cause
               })
           ),
           Effect.flatMap((httpError) =>
@@ -250,11 +235,11 @@ const authSignInRequest = (
               new ApiAuthError({
                 message: httpError.message,
                 statusCode: notOk.status,
-                cause: httpError.cause,
+                cause: httpError.cause
               })
             )
           )
-        ),
+        )
     })
   })
 
@@ -281,18 +266,18 @@ const makeAuthService = Effect.gen(function* () {
   const scheduleLock = (state: AuthState): void => {
     clearLockTimeout()
 
-    if (state._tag !== "Authenticated") {
+    if (state._tag !== 'Authenticated') {
       return
     }
 
     const delayMs = state.expiresAtMs - Date.now()
     if (delayMs <= 0) {
-      currentAuthState = { _tag: "Locked", reason: "TokenExpired", email: state.email }
+      currentAuthState = { _tag: 'Locked', reason: 'TokenExpired', email: state.email }
       return
     }
 
     lockTimeout = setTimeout(() => {
-      currentAuthState = { _tag: "Locked", reason: "TokenExpired", email: state.email }
+      currentAuthState = { _tag: 'Locked', reason: 'TokenExpired', email: state.email }
     }, delayMs)
   }
 
@@ -318,12 +303,12 @@ const makeAuthService = Effect.gen(function* () {
   )
 
   const getStatus: Effect.Effect<AuthState, AuthStorageError> = Effect.sync(() => {
-    if (currentAuthState._tag === "Authenticated") {
+    if (currentAuthState._tag === 'Authenticated') {
       if (currentAuthState.expiresAtMs <= Date.now()) {
         currentAuthState = {
-          _tag: "Locked",
-          reason: "TokenExpired",
-          email: currentAuthState.email,
+          _tag: 'Locked',
+          reason: 'TokenExpired',
+          email: currentAuthState.email
         }
         clearLockTimeout()
       }
@@ -333,51 +318,51 @@ const makeAuthService = Effect.gen(function* () {
   })
 
   const requireAuthenticated: Effect.Effect<
-    Extract<AuthState, { _tag: "Authenticated" }>,
+    Extract<AuthState, { _tag: 'Authenticated' }>,
     UnauthorizedError | LockedError | AuthStorageError
-  > = Effect.flatMap(getStatus, (state): Effect.Effect<
-    Extract<AuthState, { _tag: "Authenticated" }>,
-    UnauthorizedError | LockedError
-  > => {
-    switch (state._tag) {
-      case "Authenticated":
-        return Effect.succeed(state)
-      case "Locked":
-        return Effect.fail(
-          new LockedError({
-            message: "Session expired. Please sign in again (internet required).",
-          })
-        )
-      case "Unauthenticated":
-        return Effect.fail(
-          new UnauthorizedError({ message: "Please sign in (internet required)." })
-        )
-    }
-  })
-
-  const getAccessToken: Effect.Effect<
-    string,
-    UnauthorizedError | LockedError | AuthStorageError
-  > = requireAuthenticated.pipe(
-    Effect.flatMap(() =>
-      Effect.suspend(() => {
-        if (Option.isNone(currentStoredSession)) {
+  > = Effect.flatMap(
+    getStatus,
+    (
+      state
+    ): Effect.Effect<
+      Extract<AuthState, { _tag: 'Authenticated' }>,
+      UnauthorizedError | LockedError
+    > => {
+      switch (state._tag) {
+        case 'Authenticated':
+          return Effect.succeed(state)
+        case 'Locked':
           return Effect.fail(
-            new UnauthorizedError({ message: "Please sign in (internet required)." })
+            new LockedError({
+              message: 'Session expired. Please sign in again (internet required).'
+            })
           )
-        }
-
-        return Effect.succeed(currentStoredSession.value.accessToken)
-      })
-    )
+        case 'Unauthenticated':
+          return Effect.fail(
+            new UnauthorizedError({ message: 'Please sign in (internet required).' })
+          )
+      }
+    }
   )
+
+  const getAccessToken: Effect.Effect<string, UnauthorizedError | LockedError | AuthStorageError> =
+    requireAuthenticated.pipe(
+      Effect.flatMap(() =>
+        Effect.suspend(() => {
+          if (Option.isNone(currentStoredSession)) {
+            return Effect.fail(
+              new UnauthorizedError({ message: 'Please sign in (internet required).' })
+            )
+          }
+
+          return Effect.succeed(currentStoredSession.value.accessToken)
+        })
+      )
+    )
 
   const signIn = (
     request: AuthSignInRequest
-  ): Effect.Effect<
-    AuthState,
-    ApiConfigError | ApiAuthError | AuthStorageError
-  > =>
+  ): Effect.Effect<AuthState, ApiConfigError | ApiAuthError | AuthStorageError> =>
     Effect.gen(function* () {
       const config = yield* getApiConfig()
       const session = yield* authSignInRequest(client, config, request)
@@ -398,11 +383,11 @@ const makeAuthService = Effect.gen(function* () {
     signIn,
     signOut,
     requireAuthenticated,
-    getAccessToken,
+    getAccessToken
   } as const
 })
 
-export class AuthService extends Effect.Service<AuthService>()("services/AuthService", {
+export class AuthService extends Effect.Service<AuthService>()('services/AuthService', {
   dependencies: [NodeFileSystem.layer, FetchHttpClient.layer],
-  effect: makeAuthService,
+  effect: makeAuthService
 }) {}

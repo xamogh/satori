@@ -1,7 +1,7 @@
-import * as React from "react"
-import { cn } from "../../lib/utils"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
-import { Skeleton } from "../ui/skeleton"
+import * as React from 'react'
+import { cn } from '../../lib/utils'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table'
+import { Skeleton } from '../ui/skeleton'
 
 export type DataTableColumn<Row> = {
   readonly id: string
@@ -21,7 +21,7 @@ export type DataTableProps<Row> = {
   readonly className?: string
 }
 
-const defaultEmptyState = "No results."
+const defaultEmptyState = 'No results.'
 
 export const DataTable = <Row,>({
   columns,
@@ -30,13 +30,13 @@ export const DataTable = <Row,>({
   emptyState = defaultEmptyState,
   loading = false,
   loadingRowCount = 5,
-  className,
+  className
 }: DataTableProps<Row>): React.JSX.Element => {
   const showEmpty = rows.length === 0 && !loading
   const showLoading = rows.length === 0 && loading
 
   return (
-    <div className={cn("overflow-hidden rounded-md border", className)}>
+    <div className={cn('overflow-hidden rounded-md border', className)}>
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -70,7 +70,10 @@ export const DataTable = <Row,>({
             : null}
           {showEmpty ? (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center text-muted-foreground"
+              >
                 {emptyState}
               </TableCell>
             </TableRow>

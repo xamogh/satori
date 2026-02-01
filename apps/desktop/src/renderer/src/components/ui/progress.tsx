@@ -1,5 +1,5 @@
-import * as React from "react"
-import { cn } from "../../lib/utils"
+import * as React from 'react'
+import { cn } from '../../lib/utils'
 
 export type ProgressProps = React.HTMLAttributes<HTMLDivElement> & {
   readonly value?: number
@@ -12,25 +12,20 @@ const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
     const percentage = Math.min(Math.max((value / max) * 100, 0), 100)
 
     return (
-      <div className={cn("relative", className)} {...props}>
-        <div
-          ref={ref}
-          className="h-2 w-full overflow-hidden rounded-full bg-primary/20"
-        >
+      <div className={cn('relative', className)} {...props}>
+        <div ref={ref} className="h-2 w-full overflow-hidden rounded-full bg-primary/20">
           <div
             className="h-full rounded-full bg-primary transition-all duration-300 ease-in-out"
             style={{ width: `${percentage}%` }}
           />
         </div>
         {showLabel ? (
-          <span className="mt-1 text-xs text-muted-foreground">
-            {Math.round(percentage)}%
-          </span>
+          <span className="mt-1 text-xs text-muted-foreground">{Math.round(percentage)}%</span>
         ) : null}
       </div>
     )
   }
 )
-Progress.displayName = "Progress"
+Progress.displayName = 'Progress'
 
 export { Progress }

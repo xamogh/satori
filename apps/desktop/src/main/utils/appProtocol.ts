@@ -1,10 +1,7 @@
-import { net, protocol } from "electron"
-import { isAbsolute, relative, resolve } from "node:path"
-import { pathToFileURL } from "node:url"
-import {
-  APP_PROTOCOL_HOST,
-  APP_PROTOCOL_SCHEME,
-} from "../constants/security"
+import { net, protocol } from 'electron'
+import { isAbsolute, relative, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { APP_PROTOCOL_HOST, APP_PROTOCOL_SCHEME } from '../constants/security'
 
 export const registerAppProtocolPrivileges = (): void => {
   protocol.registerSchemesAsPrivileged([
@@ -13,9 +10,9 @@ export const registerAppProtocolPrivileges = (): void => {
       privileges: {
         standard: true,
         secure: true,
-        supportFetchAPI: true,
-      },
-    },
+        supportFetchAPI: true
+      }
+    }
   ])
 }
 
@@ -24,22 +21,19 @@ export const registerAppProtocolHandler = (bundleRootDir: string): void => {
     const { host, pathname } = new URL(req.url)
 
     if (host !== APP_PROTOCOL_HOST) {
-      return new Response("Not found", { status: 404 })
+      return new Response('Not found', { status: 404 })
     }
 
-    const normalizedPathname = pathname === "/" ? "/index.html" : pathname
-    const pathToServe = resolve(bundleRootDir, "." + normalizedPathname)
+    const normalizedPathname = pathname === '/' ? '/index.html' : pathname
+    const pathToServe = resolve(bundleRootDir, '.' + normalizedPathname)
     const relativePath = relative(bundleRootDir, pathToServe)
     const isSafe =
-      relativePath.length > 0 &&
-      !relativePath.startsWith("..") &&
-      !isAbsolute(relativePath)
+      relativePath.length > 0 && !relativePath.startsWith('..') && !isAbsolute(relativePath)
 
     if (!isSafe) {
-      return new Response("Bad request", { status: 400 })
+      return new Response('Bad request', { status: 400 })
     }
 
     return net.fetch(pathToFileURL(pathToServe).toString())
   })
 }
-

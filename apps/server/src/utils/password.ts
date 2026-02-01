@@ -1,6 +1,6 @@
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto"
-import { Effect } from "effect"
-import { PasswordHashError, PasswordVerifyError } from "../errors"
+import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
+import { Effect } from 'effect'
+import { PasswordHashError, PasswordVerifyError } from '../errors'
 
 type ScryptParams = {
   readonly cost: number
@@ -11,16 +11,15 @@ type ScryptParams = {
 const defaultScryptParams: ScryptParams = {
   cost: 16384,
   blockSize: 8,
-  parallelization: 1,
+  parallelization: 1
 }
 
 const saltBytes = 16
 const keyBytes = 32
 
-const encodeBase64 = (bytes: Uint8Array): string =>
-  Buffer.from(bytes).toString("base64")
+const encodeBase64 = (bytes: Uint8Array): string => Buffer.from(bytes).toString('base64')
 
-const decodeBase64 = (text: string): Uint8Array => Buffer.from(text, "base64")
+const decodeBase64 = (text: string): Uint8Array => Buffer.from(text, 'base64')
 
 const deriveKey = (
   password: string,
@@ -36,7 +35,7 @@ const deriveKey = (
       {
         cost: params.cost,
         blockSize: params.blockSize,
-        parallelization: params.parallelization,
+        parallelization: params.parallelization
       },
       (error, derivedKey) => {
         if (error) {
@@ -58,19 +57,19 @@ export const hashPassword = (
       const derivedKey = await deriveKey(password, salt, keyBytes, params)
 
       return [
-        "scrypt",
+        'scrypt',
         String(params.cost),
         String(params.blockSize),
         String(params.parallelization),
         encodeBase64(salt),
-        encodeBase64(derivedKey),
-      ].join("$")
+        encodeBase64(derivedKey)
+      ].join('$')
     },
     catch: (error) =>
       new PasswordHashError({
-        message: "Failed to hash password",
-        cause: error,
-      }),
+        message: 'Failed to hash password',
+        cause: error
+      })
   })
 
 const parseHash = (
@@ -84,22 +83,22 @@ const parseHash = (
   PasswordVerifyError
 > =>
   Effect.suspend(() => {
-    const parts = storedHash.split("$")
+    const parts = storedHash.split('$')
     if (parts.length !== 6) {
       return Effect.fail(
         new PasswordVerifyError({
-          message: "Invalid stored password hash",
-          cause: "Invalid hash format",
+          message: 'Invalid stored password hash',
+          cause: 'Invalid hash format'
         })
       )
     }
 
     const [algo, cost, blockSize, parallelization, salt, key] = parts
-    if (algo !== "scrypt") {
+    if (algo !== 'scrypt') {
       return Effect.fail(
         new PasswordVerifyError({
-          message: "Invalid stored password hash",
-          cause: "Unsupported password hash algorithm",
+          message: 'Invalid stored password hash',
+          cause: 'Unsupported password hash algorithm'
         })
       )
     }
@@ -107,7 +106,7 @@ const parseHash = (
     const params: ScryptParams = {
       cost: Number(cost),
       blockSize: Number(blockSize),
-      parallelization: Number(parallelization),
+      parallelization: Number(parallelization)
     }
 
     if (
@@ -117,8 +116,8 @@ const parseHash = (
     ) {
       return Effect.fail(
         new PasswordVerifyError({
-          message: "Invalid stored password hash",
-          cause: "Invalid scrypt params",
+          message: 'Invalid stored password hash',
+          cause: 'Invalid scrypt params'
         })
       )
     }
@@ -126,7 +125,7 @@ const parseHash = (
     return Effect.succeed({
       params,
       salt: decodeBase64(String(salt)),
-      derivedKey: decodeBase64(String(key)),
+      derivedKey: decodeBase64(String(key))
     })
   })
 
@@ -138,13 +137,12 @@ export const verifyPassword = (
     const { params, salt, derivedKey } = yield* parseHash(storedHash)
 
     const candidate = yield* Effect.tryPromise({
-      try: async () =>
-        deriveKey(password, salt, derivedKey.byteLength, params),
+      try: async () => deriveKey(password, salt, derivedKey.byteLength, params),
       catch: (error) =>
         new PasswordVerifyError({
-          message: "Failed to verify password",
-          cause: error,
-        }),
+          message: 'Failed to verify password',
+          cause: error
+        })
     })
 
     if (candidate.byteLength !== derivedKey.byteLength) {

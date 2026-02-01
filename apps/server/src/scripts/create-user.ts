@@ -1,16 +1,16 @@
-import { NodeRuntime } from "@effect/platform-node"
-import { Effect, Option, Schema } from "effect"
-import { UserRoleSchema } from "@satori/domain/auth/schemas"
-import { PgClient } from "../db/pg-client"
-import { DbError, EnvError } from "../errors"
-import { hashPassword } from "../utils/password"
+import { NodeRuntime } from '@effect/platform-node'
+import { Effect, Option, Schema } from 'effect'
+import { UserRoleSchema } from '@satori/domain/auth/schemas'
+import { PgClient } from '../db/pg-client'
+import { DbError, EnvError } from '../errors'
+import { hashPassword } from '../utils/password'
 
 const usage = (): void => {
   console.error(
     [
-      "Usage:",
-      "  pnpm server:create-user -- --email <email> --password <password> [--role admin|staff|viewer]",
-    ].join("\n")
+      'Usage:',
+      '  pnpm server:create-user -- --email <email> --password <password> [--role admin|staff|viewer]'
+    ].join('\n')
   )
 }
 
@@ -18,19 +18,19 @@ const getArg = (name: string): Option.Option<string> => {
   const index = process.argv.findIndex((arg) => arg === name)
   if (index < 0) return Option.none()
   const value = process.argv[index + 1]
-  return typeof value === "string" ? Option.some(value) : Option.none()
+  return typeof value === 'string' ? Option.some(value) : Option.none()
 }
 
 const CreateUserRowSchema = Schema.Struct({
   id: Schema.String,
   email: Schema.String,
-  role: UserRoleSchema,
+  role: UserRoleSchema
 })
 
 const program = Effect.gen(function* () {
-  const email = Option.getOrElse(getArg("--email"), () => "")
-  const password = Option.getOrElse(getArg("--password"), () => "")
-  const roleInput = Option.getOrElse(getArg("--role"), () => "staff")
+  const email = Option.getOrElse(getArg('--email'), () => '')
+  const password = Option.getOrElse(getArg('--password'), () => '')
+  const roleInput = Option.getOrElse(getArg('--role'), () => 'staff')
 
   if (email.length === 0 || password.length === 0) {
     usage()
@@ -42,8 +42,8 @@ const program = Effect.gen(function* () {
     Effect.mapError(
       (error) =>
         new EnvError({
-          message: "Invalid role",
-          cause: error,
+          message: 'Invalid role',
+          cause: error
         })
     )
   )
@@ -61,8 +61,8 @@ const program = Effect.gen(function* () {
       Effect.mapError(
         (cause) =>
           new DbError({
-            message: "Failed to insert user",
-            cause,
+            message: 'Failed to insert user',
+            cause
           })
       )
     )
@@ -71,14 +71,14 @@ const program = Effect.gen(function* () {
     Effect.mapError(
       (error) =>
         new DbError({
-          message: "Inserted user but could not decode response",
-          cause: error,
+          message: 'Inserted user but could not decode response',
+          cause: error
         })
     )
   )
 
   if (inserted.length === 0) {
-    console.error("Inserted user but did not receive a row back")
+    console.error('Inserted user but did not receive a row back')
     process.exitCode = 1
     return
   }
@@ -91,19 +91,19 @@ NodeRuntime.runMain(
   Effect.scoped(
     program.pipe(
       Effect.provide(PgClient.Default),
-      Effect.catchTag("EnvError", (error) =>
+      Effect.catchTag('EnvError', (error) =>
         Effect.sync(() => {
           console.error(error.message)
           process.exitCode = 1
         })
       ),
-      Effect.catchTag("PasswordHashError", (error) =>
+      Effect.catchTag('PasswordHashError', (error) =>
         Effect.sync(() => {
           console.error(error.message)
           process.exitCode = 1
         })
       ),
-      Effect.catchTag("DbError", (error) =>
+      Effect.catchTag('DbError', (error) =>
         Effect.sync(() => {
           console.error(error.message)
           process.exitCode = 1

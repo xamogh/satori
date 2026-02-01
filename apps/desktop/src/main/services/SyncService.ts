@@ -2,18 +2,14 @@ import {
   FetchHttpClient,
   HttpClient,
   HttpClientRequest,
-  HttpClientResponse,
-} from "@effect/platform"
-import { Cause, Effect, Either, Option, Schema } from "effect"
-import { AuthService } from "./AuthService"
-import { LocalDbService, type LocalDbClient } from "./LocalDbService"
-import { getApiConfig } from "../utils/apiConfig"
-import { SYNC_BATCH_SIZE, SYNC_INTERVAL_MS } from "../constants/sync"
-import {
-  BadRequest,
-  InternalServerError,
-  Unauthorized,
-} from "@satori/api-contract/api/http-errors"
+  HttpClientResponse
+} from '@effect/platform'
+import { Cause, Effect, Either, Option, Schema } from 'effect'
+import { AuthService } from './AuthService'
+import { LocalDbService, type LocalDbClient } from './LocalDbService'
+import { getApiConfig } from '../utils/apiConfig'
+import { SYNC_BATCH_SIZE, SYNC_INTERVAL_MS } from '../constants/sync'
+import { BadRequest, InternalServerError, Unauthorized } from '@satori/api-contract/api/http-errors'
 import {
   SyncOperationSchema,
   SyncRequestSchema,
@@ -21,32 +17,32 @@ import {
   type SyncOperation,
   type SyncRequest,
   type SyncResponse,
-  type SyncStatus,
-} from "@satori/domain/sync/schemas"
-import { ApiAuthError, LocalDbQueryError } from "../errors"
-import type { Attendance } from "@satori/domain/domain/attendance"
-import type { Empowerment } from "@satori/domain/domain/empowerment"
-import type { Event, EventAttendee, EventDay } from "@satori/domain/domain/event"
-import type { Group, PersonGroup } from "@satori/domain/domain/group"
-import type { Guru } from "@satori/domain/domain/guru"
-import type { MahakramaHistory, MahakramaStep } from "@satori/domain/domain/mahakrama"
-import type { Person } from "@satori/domain/domain/person"
-import type { Photo } from "@satori/domain/domain/photo"
-import { toSqliteBoolean } from "../utils/sqlite"
+  type SyncStatus
+} from '@satori/domain/sync/schemas'
+import { ApiAuthError, LocalDbQueryError } from '../errors'
+import type { Attendance } from '@satori/domain/domain/attendance'
+import type { Empowerment } from '@satori/domain/domain/empowerment'
+import type { Event, EventAttendee, EventDay } from '@satori/domain/domain/event'
+import type { Group, PersonGroup } from '@satori/domain/domain/group'
+import type { Guru } from '@satori/domain/domain/guru'
+import type { MahakramaHistory, MahakramaStep } from '@satori/domain/domain/mahakrama'
+import type { Person } from '@satori/domain/domain/person'
+import type { Photo } from '@satori/domain/domain/photo'
+import { toSqliteBoolean } from '../utils/sqlite'
 
 const nowMs = (): number => Date.now()
 
 const CountRowSchema = Schema.Struct({
-  count: Schema.Number,
+  count: Schema.Number
 })
 
 const CursorRowSchema = Schema.Struct({
-  cursorMs: Schema.Union(Schema.Number, Schema.Null),
+  cursorMs: Schema.Union(Schema.Number, Schema.Null)
 })
 
 const OutboxRowSchema = Schema.Struct({
   opId: Schema.String,
-  bodyJson: Schema.String,
+  bodyJson: Schema.String
 })
 
 type OutboxRow = Schema.Schema.Type<typeof OutboxRowSchema>
@@ -55,20 +51,16 @@ const emptyStatus: SyncStatus = {
   lastAttemptAtMs: null,
   lastSuccessAtMs: null,
   lastError: null,
-  pendingOutboxCount: 0,
+  pendingOutboxCount: 0
 }
 
-const HttpErrorSchema = Schema.Union(
-  Unauthorized,
-  BadRequest,
-  InternalServerError
-)
+const HttpErrorSchema = Schema.Union(Unauthorized, BadRequest, InternalServerError)
 
 const opPlaceholderParams = (count: number): string =>
-  Array.from({ length: count }, () => "?").join(",")
+  Array.from({ length: count }, () => '?').join(',')
 
 const stringifyUnknown = (value: unknown): string => {
-  if (typeof value === "string") return value
+  if (typeof value === 'string') return value
   if (value instanceof Error) return value.message
   try {
     return JSON.stringify(value)
@@ -103,25 +95,25 @@ const logSyncError = (cause: Cause.Cause<unknown>): void => {
   if (Option.isSome(failure)) {
     const error = failure.value
     if (error instanceof ApiAuthError) {
-      console.error("Sync API error", {
+      console.error('Sync API error', {
         message: error.message,
         statusCode: error.statusCode,
-        cause: error.cause,
+        cause: error.cause
       })
       return
     }
     if (error instanceof LocalDbQueryError) {
-      console.error("Sync local DB error", {
+      console.error('Sync local DB error', {
         message: error.message,
         query: error.query,
-        cause: error.cause,
+        cause: error.cause
       })
       return
     }
-    console.error("Sync error", error)
+    console.error('Sync error', error)
     return
   }
-  console.error("Sync failed", Cause.pretty(cause))
+  console.error('Sync failed', Cause.pretty(cause))
 }
 
 const makeSyncService = Effect.gen(function* () {
@@ -129,29 +121,24 @@ const makeSyncService = Effect.gen(function* () {
   const db = yield* LocalDbService
   const client = yield* HttpClient.HttpClient
 
-  type DbClient = Omit<LocalDbClient, "transaction">
+  type DbClient = Omit<LocalDbClient, 'transaction'>
 
   let status: SyncStatus = emptyStatus
   let running = false
 
   const outboxCount = db
-    .get("select count(*) as count from outbox", CountRowSchema, [])
+    .get('select count(*) as count from outbox', CountRowSchema, [])
     .pipe(Effect.map((row) => (Option.isNone(row) ? 0 : row.value.count)))
 
   const getCursor = db
-    .get("select cursor_ms as cursorMs from sync_state where id = 1", CursorRowSchema, [])
+    .get('select cursor_ms as cursorMs from sync_state where id = 1', CursorRowSchema, [])
     .pipe(Effect.map((row) => (Option.isNone(row) ? null : row.value.cursorMs)))
 
-  const setCursor = (
-    client: DbClient,
-    cursorMs: number
-  ): Effect.Effect<void, LocalDbQueryError> =>
-    client
-      .run("update sync_state set cursor_ms = ? where id = 1", [cursorMs])
-      .pipe(Effect.asVoid)
+  const setCursor = (client: DbClient, cursorMs: number): Effect.Effect<void, LocalDbQueryError> =>
+    client.run('update sync_state set cursor_ms = ? where id = 1', [cursorMs]).pipe(Effect.asVoid)
 
   const readOutboxBatch = db.all(
-    "select op_id as opId, body_json as bodyJson from outbox order by created_at_ms asc limit ?",
+    'select op_id as opId, body_json as bodyJson from outbox order by created_at_ms asc limit ?',
     OutboxRowSchema,
     [SYNC_BATCH_SIZE]
   )
@@ -163,16 +150,10 @@ const makeSyncService = Effect.gen(function* () {
     opIds.length === 0
       ? Effect.void
       : client
-          .run(
-            `delete from outbox where op_id in (${opPlaceholderParams(opIds.length)})`,
-            opIds
-          )
+          .run(`delete from outbox where op_id in (${opPlaceholderParams(opIds.length)})`, opIds)
           .pipe(Effect.asVoid)
 
-  const upsertEvent = (
-    client: DbClient,
-    event: Event
-  ): Effect.Effect<void, LocalDbQueryError> =>
+  const upsertEvent = (client: DbClient, event: Event): Effect.Effect<void, LocalDbQueryError> =>
     client
       .run(
         `
@@ -219,7 +200,7 @@ where excluded.updated_at_ms >= events.updated_at_ms
           event.guruId,
           event.updatedAtMs,
           event.deletedAtMs,
-          event.serverModifiedAtMs,
+          event.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
@@ -250,7 +231,7 @@ where excluded.updated_at_ms >= event_days.updated_at_ms
           eventDay.dateMs,
           eventDay.updatedAtMs,
           eventDay.deletedAtMs,
-          eventDay.serverModifiedAtMs,
+          eventDay.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
@@ -308,15 +289,12 @@ where excluded.updated_at_ms >= event_attendees.updated_at_ms
           attendee.attendanceOverrideNote,
           attendee.updatedAtMs,
           attendee.deletedAtMs,
-          attendee.serverModifiedAtMs,
+          attendee.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
 
-  const upsertPerson = (
-    client: DbClient,
-    person: Person
-  ): Effect.Effect<void, LocalDbQueryError> =>
+  const upsertPerson = (client: DbClient, person: Person): Effect.Effect<void, LocalDbQueryError> =>
     client
       .run(
         `
@@ -414,7 +392,7 @@ where excluded.updated_at_ms >= persons.updated_at_ms
           person.photoId,
           person.updatedAtMs,
           person.deletedAtMs,
-          person.serverModifiedAtMs,
+          person.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
@@ -457,15 +435,12 @@ where excluded.updated_at_ms >= event_day_attendance.updated_at_ms
           attendance.checkedInBy,
           attendance.updatedAtMs,
           attendance.deletedAtMs,
-          attendance.serverModifiedAtMs,
+          attendance.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
 
-  const upsertGroup = (
-    client: DbClient,
-    group: Group
-  ): Effect.Effect<void, LocalDbQueryError> =>
+  const upsertGroup = (client: DbClient, group: Group): Effect.Effect<void, LocalDbQueryError> =>
     client
       .run(
         `
@@ -486,7 +461,7 @@ where excluded.updated_at_ms >= groups.updated_at_ms
           group.description,
           group.updatedAtMs,
           group.deletedAtMs,
-          group.serverModifiedAtMs,
+          group.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
@@ -517,7 +492,7 @@ where excluded.updated_at_ms >= person_groups.updated_at_ms
           personGroup.joinedAtMs,
           personGroup.updatedAtMs,
           personGroup.deletedAtMs,
-          personGroup.serverModifiedAtMs,
+          personGroup.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
@@ -566,15 +541,12 @@ where excluded.updated_at_ms >= empowerments.updated_at_ms
           toSqliteBoolean(empowerment.majorEmpowerment),
           empowerment.updatedAtMs,
           empowerment.deletedAtMs,
-          empowerment.serverModifiedAtMs,
+          empowerment.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
 
-  const upsertGuru = (
-    client: DbClient,
-    guru: Guru
-  ): Effect.Effect<void, LocalDbQueryError> =>
+  const upsertGuru = (client: DbClient, guru: Guru): Effect.Effect<void, LocalDbQueryError> =>
     client
       .run(
         `
@@ -588,13 +560,7 @@ on conflict(id) do update set
   server_modified_at_ms = excluded.server_modified_at_ms
 where excluded.updated_at_ms >= gurus.updated_at_ms
 `,
-        [
-          guru.id,
-          guru.name,
-          guru.updatedAtMs,
-          guru.deletedAtMs,
-          guru.serverModifiedAtMs,
-        ]
+        [guru.id, guru.name, guru.updatedAtMs, guru.deletedAtMs, guru.serverModifiedAtMs]
       )
       .pipe(Effect.asVoid)
 
@@ -639,7 +605,7 @@ where excluded.updated_at_ms >= mahakrama_steps.updated_at_ms
           step.description,
           step.updatedAtMs,
           step.deletedAtMs,
-          step.serverModifiedAtMs,
+          step.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
@@ -688,15 +654,12 @@ where excluded.updated_at_ms >= mahakrama_history.updated_at_ms
           history.completionNotes,
           history.updatedAtMs,
           history.deletedAtMs,
-          history.serverModifiedAtMs,
+          history.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
 
-  const upsertPhoto = (
-    client: DbClient,
-    photo: Photo
-  ): Effect.Effect<void, LocalDbQueryError> =>
+  const upsertPhoto = (client: DbClient, photo: Photo): Effect.Effect<void, LocalDbQueryError> =>
     client
       .run(
         `
@@ -719,62 +682,79 @@ where excluded.updated_at_ms >= photos.updated_at_ms
           photo.bytes,
           photo.updatedAtMs,
           photo.deletedAtMs,
-          photo.serverModifiedAtMs,
+          photo.serverModifiedAtMs
         ]
       )
       .pipe(Effect.asVoid)
 
-  const applyChanges = (
-    response: SyncResponse
-  ): Effect.Effect<void, LocalDbQueryError> =>
+  const applyChanges = (response: SyncResponse): Effect.Effect<void, LocalDbQueryError> =>
     db.transaction((tx) =>
       Effect.forEach(response.changes.events, (event) => upsertEvent(tx, event), {
-        concurrency: 1,
+        concurrency: 1
       }).pipe(
         Effect.zipRight(
-          Effect.forEach(response.changes.eventDays, (eventDay) =>
-            upsertEventDay(tx, eventDay), { concurrency: 1 })
-        ),
-        Effect.zipRight(
-          Effect.forEach(response.changes.eventAttendees, (attendee) =>
-            upsertEventAttendee(tx, attendee), { concurrency: 1 })
-        ),
-        Effect.zipRight(
-          Effect.forEach(response.changes.persons, (person) =>
-            upsertPerson(tx, person), { concurrency: 1 })
-        ),
-        Effect.zipRight(
-          Effect.forEach(response.changes.attendance, (attendance) =>
-            upsertAttendance(tx, attendance), { concurrency: 1 })
-        ),
-        Effect.zipRight(
-          Effect.forEach(response.changes.groups, (group) =>
-            upsertGroup(tx, group), { concurrency: 1 })
-        ),
-        Effect.zipRight(
-          Effect.forEach(response.changes.personGroups, (personGroup) =>
-            upsertPersonGroup(tx, personGroup), { concurrency: 1 })
-        ),
-        Effect.zipRight(
-          Effect.forEach(response.changes.empowerments, (empowerment) =>
-            upsertEmpowerment(tx, empowerment), { concurrency: 1 })
-        ),
-        Effect.zipRight(
-          Effect.forEach(response.changes.gurus, (guru) => upsertGuru(tx, guru), {
-            concurrency: 1,
+          Effect.forEach(response.changes.eventDays, (eventDay) => upsertEventDay(tx, eventDay), {
+            concurrency: 1
           })
         ),
         Effect.zipRight(
-          Effect.forEach(response.changes.mahakramaSteps, (step) =>
-            upsertMahakramaStep(tx, step), { concurrency: 1 })
+          Effect.forEach(
+            response.changes.eventAttendees,
+            (attendee) => upsertEventAttendee(tx, attendee),
+            { concurrency: 1 }
+          )
         ),
         Effect.zipRight(
-          Effect.forEach(response.changes.mahakramaHistory, (history) =>
-            upsertMahakramaHistory(tx, history), { concurrency: 1 })
+          Effect.forEach(response.changes.persons, (person) => upsertPerson(tx, person), {
+            concurrency: 1
+          })
+        ),
+        Effect.zipRight(
+          Effect.forEach(
+            response.changes.attendance,
+            (attendance) => upsertAttendance(tx, attendance),
+            { concurrency: 1 }
+          )
+        ),
+        Effect.zipRight(
+          Effect.forEach(response.changes.groups, (group) => upsertGroup(tx, group), {
+            concurrency: 1
+          })
+        ),
+        Effect.zipRight(
+          Effect.forEach(
+            response.changes.personGroups,
+            (personGroup) => upsertPersonGroup(tx, personGroup),
+            { concurrency: 1 }
+          )
+        ),
+        Effect.zipRight(
+          Effect.forEach(
+            response.changes.empowerments,
+            (empowerment) => upsertEmpowerment(tx, empowerment),
+            { concurrency: 1 }
+          )
+        ),
+        Effect.zipRight(
+          Effect.forEach(response.changes.gurus, (guru) => upsertGuru(tx, guru), {
+            concurrency: 1
+          })
+        ),
+        Effect.zipRight(
+          Effect.forEach(response.changes.mahakramaSteps, (step) => upsertMahakramaStep(tx, step), {
+            concurrency: 1
+          })
+        ),
+        Effect.zipRight(
+          Effect.forEach(
+            response.changes.mahakramaHistory,
+            (history) => upsertMahakramaHistory(tx, history),
+            { concurrency: 1 }
+          )
         ),
         Effect.zipRight(
           Effect.forEach(response.changes.photos, (photo) => upsertPhoto(tx, photo), {
-            concurrency: 1,
+            concurrency: 1
           })
         ),
         Effect.zipRight(setCursor(tx, response.cursorMs)),
@@ -787,14 +767,12 @@ where excluded.updated_at_ms >= photos.updated_at_ms
     row: OutboxRow
   ): Effect.Effect<Option.Option<SyncOperation>, LocalDbQueryError> =>
     Effect.gen(function* () {
-      const decoded = Schema.decodeUnknownEither(
-        Schema.parseJson(SyncOperationSchema)
-      )(row.bodyJson)
+      const decoded = Schema.decodeUnknownEither(Schema.parseJson(SyncOperationSchema))(
+        row.bodyJson
+      )
 
       if (Either.isLeft(decoded)) {
-        yield* db.run("delete from outbox where op_id = ?", [row.opId]).pipe(
-          Effect.asVoid
-        )
+        yield* db.run('delete from outbox where op_id = ?', [row.opId]).pipe(Effect.asVoid)
         return Option.none()
       }
 
@@ -805,9 +783,7 @@ where excluded.updated_at_ms >= photos.updated_at_ms
     rows: ReadonlyArray<OutboxRow>
   ): Effect.Effect<ReadonlyArray<SyncOperation>, LocalDbQueryError> =>
     Effect.forEach(rows, decodeOutboxRow, { concurrency: 1 }).pipe(
-      Effect.map((values) =>
-        values.flatMap((value) => (Option.isNone(value) ? [] : [value.value]))
-      )
+      Effect.map((values) => values.flatMap((value) => (Option.isNone(value) ? [] : [value.value])))
     )
 
   const syncAttempt = Effect.gen(function* () {
@@ -818,8 +794,7 @@ where excluded.updated_at_ms >= photos.updated_at_ms
     const outboxRows = yield* readOutboxBatch
     const operations = yield* readOperations(outboxRows)
 
-    const request: SyncRequest =
-      cursor === null ? { operations } : { cursorMs: cursor, operations }
+    const request: SyncRequest = cursor === null ? { operations } : { cursorMs: cursor, operations }
 
     const url = `${config.baseUrl}/sync`
     const httpRequest = yield* HttpClientRequest.schemaBodyJson(SyncRequestSchema)(
@@ -831,9 +806,9 @@ where excluded.updated_at_ms >= photos.updated_at_ms
       Effect.mapError(
         (cause) =>
           new ApiAuthError({
-            message: "Invalid sync request",
+            message: 'Invalid sync request',
             statusCode: 0,
-            cause,
+            cause
           })
       )
     )
@@ -842,22 +817,22 @@ where excluded.updated_at_ms >= photos.updated_at_ms
       Effect.mapError(
         (cause) =>
           new ApiAuthError({
-            message: "Network error",
+            message: 'Network error',
             statusCode: 0,
-            cause,
+            cause
           })
       )
     )
 
     const decoded = yield* HttpClientResponse.matchStatus(response, {
-      "2xx": (ok) =>
+      '2xx': (ok) =>
         HttpClientResponse.schemaBodyJson(SyncResponseSchema)(ok).pipe(
           Effect.mapError(
             (cause) =>
               new ApiAuthError({
-                message: "Invalid API response",
+                message: 'Invalid API response',
                 statusCode: ok.status,
-                cause,
+                cause
               })
           )
         ),
@@ -866,9 +841,9 @@ where excluded.updated_at_ms >= photos.updated_at_ms
           Effect.mapError(
             (cause) =>
               new ApiAuthError({
-                message: "Invalid error response from API",
+                message: 'Invalid error response from API',
                 statusCode: notOk.status,
-                cause,
+                cause
               })
           ),
           Effect.flatMap((error) =>
@@ -876,11 +851,11 @@ where excluded.updated_at_ms >= photos.updated_at_ms
               new ApiAuthError({
                 message: error.message,
                 statusCode: notOk.status,
-                cause: error.cause,
+                cause: error.cause
               })
             )
           )
-        ),
+        )
     })
 
     yield* applyChanges(decoded)
@@ -889,13 +864,12 @@ where excluded.updated_at_ms >= photos.updated_at_ms
   const refreshStatus = (lastError: string | null): Effect.Effect<SyncStatus, never> =>
     Effect.exit(outboxCount).pipe(
       Effect.map((exit) => {
-        const pendingOutboxCount =
-          exit._tag === "Success" ? exit.value : status.pendingOutboxCount
+        const pendingOutboxCount = exit._tag === 'Success' ? exit.value : status.pendingOutboxCount
 
         status = {
           ...status,
           lastError,
-          pendingOutboxCount,
+          pendingOutboxCount
         }
 
         return status
@@ -919,17 +893,17 @@ where excluded.updated_at_ms >= photos.updated_at_ms
 
     running = false
 
-    if (exit._tag === "Failure") {
+    if (exit._tag === 'Failure') {
       logSyncError(exit.cause)
     }
 
-    const lastError = exit._tag === "Failure" ? formatSyncError(exit.cause) : null
+    const lastError = exit._tag === 'Failure' ? formatSyncError(exit.cause) : null
 
     status = {
       lastAttemptAtMs: start,
-      lastSuccessAtMs: exit._tag === "Success" ? end : status.lastSuccessAtMs,
+      lastSuccessAtMs: exit._tag === 'Success' ? end : status.lastSuccessAtMs,
       lastError,
-      pendingOutboxCount: status.pendingOutboxCount,
+      pendingOutboxCount: status.pendingOutboxCount
     }
 
     return yield* refreshStatus(lastError)
@@ -938,7 +912,7 @@ where excluded.updated_at_ms >= photos.updated_at_ms
   const startPolling = Effect.sync(() => {
     const timer = setInterval(() => {
       Effect.runPromise(syncNow).catch((error) => {
-        console.error("Failed to run sync:", error)
+        console.error('Failed to run sync:', error)
       })
     }, SYNC_INTERVAL_MS)
 
@@ -948,11 +922,11 @@ where excluded.updated_at_ms >= photos.updated_at_ms
   return {
     getStatus,
     syncNow,
-    startPolling,
+    startPolling
   } as const
 }).pipe(Effect.provide(FetchHttpClient.layer))
 
-export class SyncService extends Effect.Service<SyncService>()("services/SyncService", {
+export class SyncService extends Effect.Service<SyncService>()('services/SyncService', {
   dependencies: [AuthService.Default, LocalDbService.Default],
-  effect: makeSyncService,
+  effect: makeSyncService
 }) {}

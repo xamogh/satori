@@ -1,5 +1,5 @@
-import * as React from "react"
-import { cn } from "../../lib/utils"
+import * as React from 'react'
+import { cn } from '../../lib/utils'
 
 export type EmptyStateProps = {
   readonly icon: React.ReactNode
@@ -14,11 +14,11 @@ export const EmptyState = ({
   title,
   description,
   action,
-  className,
+  className
 }: EmptyStateProps): React.JSX.Element => (
   <div
     className={cn(
-      "flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/30 px-6 py-12 text-center",
+      'flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/30 px-6 py-12 text-center',
       className
     )}
   >

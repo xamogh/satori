@@ -1,21 +1,21 @@
-import * as React from "react"
-import { cn } from "../../lib/utils"
+import * as React from 'react'
+import { cn } from '../../lib/utils'
 
 export type ActivityItemProps = {
   readonly icon: React.ReactNode
   readonly title: React.ReactNode
   readonly description?: React.ReactNode
   readonly timestamp?: React.ReactNode
-  readonly variant?: "default" | "success" | "error" | "warning"
+  readonly variant?: 'default' | 'success' | 'error' | 'warning'
   readonly showConnector?: boolean
   readonly className?: string
 }
 
 const iconVariantStyles = {
-  default: "bg-muted text-muted-foreground",
-  success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  error: "bg-red-500/10 text-red-600 dark:text-red-400",
-  warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  default: 'bg-muted text-muted-foreground',
+  success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  error: 'bg-red-500/10 text-red-600 dark:text-red-400',
+  warning: 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
 } as const
 
 export const ActivityItem = ({
@@ -23,17 +23,17 @@ export const ActivityItem = ({
   title,
   description,
   timestamp,
-  variant = "default",
+  variant = 'default',
   showConnector = false,
-  className,
+  className
 }: ActivityItemProps): React.JSX.Element => (
-  <div className={cn("relative flex gap-3 min-w-0", className)}>
+  <div className={cn('relative flex gap-3 min-w-0', className)}>
     {showConnector ? (
       <div className="absolute left-4 top-10 h-[calc(100%-1rem)] w-px bg-border" />
     ) : null}
     <div
       className={cn(
-        "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+        'relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
         iconVariantStyles[variant]
       )}
     >
@@ -55,10 +55,8 @@ export const ActivityItem = ({
 
 export const ActivityList = ({
   children,
-  className,
+  className
 }: {
   readonly children: React.ReactNode
   readonly className?: string
-}): React.JSX.Element => (
-  <div className={cn("space-y-4", className)}>{children}</div>
-)
+}): React.JSX.Element => <div className={cn('space-y-4', className)}>{children}</div>

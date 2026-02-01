@@ -36,4 +36,3 @@ export const createStore = <S>(initialSnapshot: S): Store<S> => {
 
   return { getSnapshot, subscribe, setSnapshot, updateSnapshot }
 }
-

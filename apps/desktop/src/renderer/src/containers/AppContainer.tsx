@@ -1,11 +1,11 @@
-import { useCallback, useState, useSyncExternalStore } from "react"
-import { Either, Schema } from "effect"
-import { AuthScreen } from "../components/auth/AuthScreen"
-import { DashboardContainer } from "./DashboardContainer"
-import { AuthSignInRequestSchema } from "@satori/ipc-contract/ipc/contract"
-import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
-import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
-import { AuthStore } from "../services/AuthStore"
+import { useCallback, useState, useSyncExternalStore } from 'react'
+import { Either, Schema } from 'effect'
+import { AuthScreen } from '../components/auth/AuthScreen'
+import { DashboardContainer } from './DashboardContainer'
+import { AuthSignInRequestSchema } from '@satori/ipc-contract/ipc/contract'
+import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
+import { formatParseIssues } from '@satori/ipc-contract/utils/parseIssue'
+import { AuthStore } from '../services/AuthStore'
 
 export const AppContainer = (): React.JSX.Element => {
   const authState = useSyncExternalStore(
@@ -13,8 +13,8 @@ export const AppContainer = (): React.JSX.Element => {
     AuthStore.getSnapshot,
     AuthStore.getSnapshot
   )
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [issues, setIssues] = useState<ReadonlyArray<SchemaIssue>>([])
   const [error, setError] = useState<string | null>(null)
 
@@ -23,7 +23,7 @@ export const AppContainer = (): React.JSX.Element => {
 
     const decoded = Schema.decodeUnknownEither(AuthSignInRequestSchema)({
       email,
-      password,
+      password
     })
 
     if (Either.isLeft(decoded)) {
@@ -34,8 +34,8 @@ export const AppContainer = (): React.JSX.Element => {
     setIssues([])
     AuthStore.signIn(decoded.right).then(
       (result) => {
-        if (result._tag === "Ok") {
-          setPassword("")
+        if (result._tag === 'Ok') {
+          setPassword('')
           return
         }
 
@@ -49,14 +49,14 @@ export const AppContainer = (): React.JSX.Element => {
     setError(null)
     AuthStore.signOut().then(
       (result) => {
-        if (result._tag === "Ok") return
+        if (result._tag === 'Ok') return
         setError(result.error.message)
       },
       (reason) => setError(String(reason))
     )
   }, [])
 
-  if (authState._tag === "Loading") {
+  if (authState._tag === 'Loading') {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-sm text-muted-foreground">Loading…</div>
@@ -64,11 +64,11 @@ export const AppContainer = (): React.JSX.Element => {
     )
   }
 
-  if (authState._tag !== "Authenticated") {
+  if (authState._tag !== 'Authenticated') {
     return (
       <AuthScreen
         appName="Satori Desktop"
-        mode={authState._tag === "Locked" ? "locked" : "unauthenticated"}
+        mode={authState._tag === 'Locked' ? 'locked' : 'unauthenticated'}
         email={email}
         password={password}
         issues={issues}
@@ -80,7 +80,5 @@ export const AppContainer = (): React.JSX.Element => {
     )
   }
 
-  return (
-    <DashboardContainer auth={authState} onSignOut={signOut} appError={error} />
-  )
+  return <DashboardContainer auth={authState} onSignOut={signOut} appError={error} />
 }

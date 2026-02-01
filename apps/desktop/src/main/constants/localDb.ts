@@ -1,11 +1,11 @@
-export const LOCAL_DB_FILENAME = "satori.local.sqlite"
+export const LOCAL_DB_FILENAME = 'satori.local.sqlite'
 
 export const LOCAL_DB_SCHEMA_VERSION = 2
 
 export const LOCAL_DB_PRAGMAS = [
-  "journal_mode = WAL",
-  "synchronous = NORMAL",
-  "foreign_keys = ON",
+  'journal_mode = WAL',
+  'synchronous = NORMAL',
+  'foreign_keys = ON'
 ] as const
 
 export const LOCAL_DB_SCHEMA_SQL = `

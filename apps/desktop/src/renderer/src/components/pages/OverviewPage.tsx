@@ -1,4 +1,4 @@
-import type { Event } from "@satori/domain/domain/event"
+import type { Event } from '@satori/domain/domain/event'
 import {
   LayoutDashboard,
   CalendarDays,
@@ -7,18 +7,18 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
-  Clock,
-} from "lucide-react"
-import { Button } from "../ui/button"
-import { Card, CardContent } from "../ui/card"
-import { formatDateTime, formatRelativeTime } from "../../utils/date"
-import { Alert, AlertDescription } from "../ui/alert"
-import { PageHeader, PageContainer, ContentSection } from "../layout/PageHeader"
-import { StatCard, StatCardSkeleton } from "../ui/stat-card"
-import { StatusBadge } from "../ui/status-badge"
-import { ActivityItem, ActivityList } from "../ui/activity-item"
-import { EmptyState } from "../ui/empty-state"
-import { Skeleton } from "../ui/skeleton"
+  Clock
+} from 'lucide-react'
+import { Button } from '../ui/button'
+import { Card, CardContent } from '../ui/card'
+import { formatDateTime, formatRelativeTime } from '../../utils/date'
+import { Alert, AlertDescription } from '../ui/alert'
+import { PageHeader, PageContainer, ContentSection } from '../layout/PageHeader'
+import { StatCard, StatCardSkeleton } from '../ui/stat-card'
+import { StatusBadge } from '../ui/status-badge'
+import { ActivityItem, ActivityList } from '../ui/activity-item'
+import { EmptyState } from '../ui/empty-state'
+import { Skeleton } from '../ui/skeleton'
 
 export type OverviewStats = {
   readonly eventsCount: number
@@ -37,22 +37,24 @@ export type OverviewPageProps = {
   readonly onRefresh: () => void
 }
 
-const getSyncStatus = (stats: OverviewStats | null): {
-  variant: "success" | "error" | "warning" | "pending"
+const getSyncStatus = (
+  stats: OverviewStats | null
+): {
+  variant: 'success' | 'error' | 'warning' | 'pending'
   label: string
 } => {
-  if (!stats) return { variant: "pending", label: "Loading" }
-  if (stats.lastError) return { variant: "error", label: "Error" }
-  if (stats.pendingOutboxCount > 0) return { variant: "warning", label: "Pending" }
-  if (stats.lastSuccessAtMs) return { variant: "success", label: "Synced" }
-  return { variant: "pending", label: "Not synced" }
+  if (!stats) return { variant: 'pending', label: 'Loading' }
+  if (stats.lastError) return { variant: 'error', label: 'Error' }
+  if (stats.pendingOutboxCount > 0) return { variant: 'warning', label: 'Pending' }
+  if (stats.lastSuccessAtMs) return { variant: 'success', label: 'Synced' }
+  return { variant: 'pending', label: 'Not synced' }
 }
 
 export const OverviewPage = ({
   loading,
   error,
   stats,
-  onRefresh,
+  onRefresh
 }: OverviewPageProps): React.JSX.Element => {
   const syncStatus = getSyncStatus(stats)
 
@@ -65,7 +67,7 @@ export const OverviewPage = ({
         badge={<StatusBadge variant={syncStatus.variant} label={syncStatus.label} />}
         actions={
           <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
-            <RefreshCw className={loading ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
+            <RefreshCw className={loading ? 'mr-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4'} />
             Refresh
           </Button>
         }
@@ -106,16 +108,12 @@ export const OverviewPage = ({
               title="Pending Sync"
               value={stats?.pendingOutboxCount ?? 0}
               icon={<CloudSync className="h-5 w-5" />}
-              variant={stats?.pendingOutboxCount ? "warning" : "default"}
+              variant={stats?.pendingOutboxCount ? 'warning' : 'default'}
               description="Outbox items"
             />
             <StatCard
               title="Last Sync"
-              value={
-                stats?.lastSuccessAtMs
-                  ? formatRelativeTime(stats.lastSuccessAtMs)
-                  : "Never"
-              }
+              value={stats?.lastSuccessAtMs ? formatRelativeTime(stats.lastSuccessAtMs) : 'Never'}
               icon={
                 stats?.lastError ? (
                   <AlertCircle className="h-5 w-5" />
@@ -123,11 +121,11 @@ export const OverviewPage = ({
                   <CheckCircle2 className="h-5 w-5" />
                 )
               }
-              variant={stats?.lastError ? "destructive" : "default"}
+              variant={stats?.lastError ? 'destructive' : 'default'}
               description={
                 stats?.lastError
-                  ? stats.lastError.slice(0, 40) + (stats.lastError.length > 40 ? "..." : "")
-                  : "All changes synced"
+                  ? stats.lastError.slice(0, 40) + (stats.lastError.length > 40 ? '...' : '')
+                  : 'All changes synced'
               }
             />
           </>
@@ -201,14 +199,22 @@ export const OverviewPage = ({
                       variant="success"
                       title="Sync completed successfully"
                       timestamp={formatRelativeTime(stats.lastSuccessAtMs)}
-                      showConnector={!!stats.lastAttemptAtMs && stats.lastAttemptAtMs !== stats.lastSuccessAtMs}
+                      showConnector={
+                        !!stats.lastAttemptAtMs && stats.lastAttemptAtMs !== stats.lastSuccessAtMs
+                      }
                     />
                   ) : null}
                   {stats?.lastAttemptAtMs && stats.lastAttemptAtMs !== stats?.lastSuccessAtMs ? (
                     <ActivityItem
-                      icon={stats.lastError ? <AlertCircle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-                      variant={stats.lastError ? "error" : "default"}
-                      title={stats.lastError ? "Sync failed" : "Sync attempted"}
+                      icon={
+                        stats.lastError ? (
+                          <AlertCircle className="h-4 w-4" />
+                        ) : (
+                          <Clock className="h-4 w-4" />
+                        )
+                      }
+                      variant={stats.lastError ? 'error' : 'default'}
+                      title={stats.lastError ? 'Sync failed' : 'Sync attempted'}
                       description={stats.lastError ?? undefined}
                       timestamp={formatRelativeTime(stats.lastAttemptAtMs)}
                     />
@@ -217,11 +223,13 @@ export const OverviewPage = ({
                     <ActivityItem
                       icon={<Clock className="h-4 w-4" />}
                       variant="warning"
-                      title={`${stats.pendingOutboxCount} item${stats.pendingOutboxCount === 1 ? "" : "s"} pending`}
+                      title={`${stats.pendingOutboxCount} item${stats.pendingOutboxCount === 1 ? '' : 's'} pending`}
                       description="Waiting to be synced to server"
                     />
                   ) : null}
-                  {!stats?.lastSuccessAtMs && !stats?.lastAttemptAtMs && !stats?.pendingOutboxCount ? (
+                  {!stats?.lastSuccessAtMs &&
+                  !stats?.lastAttemptAtMs &&
+                  !stats?.pendingOutboxCount ? (
                     <EmptyState
                       icon={<CloudSync className="h-6 w-6" />}
                       title="No sync activity"

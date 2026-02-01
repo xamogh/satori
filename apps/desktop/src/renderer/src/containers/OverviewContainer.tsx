@@ -1,6 +1,6 @@
-import { useCallback, useSyncExternalStore } from "react"
-import { OverviewPage, type OverviewStats } from "../components/pages/OverviewPage"
-import { createStore } from "../utils/store"
+import { useCallback, useSyncExternalStore } from 'react'
+import { OverviewPage, type OverviewStats } from '../components/pages/OverviewPage'
+import { createStore } from '../utils/store'
 
 type OverviewState = {
   readonly loading: boolean
@@ -11,7 +11,7 @@ type OverviewState = {
 const overviewStore = createStore<OverviewState>({
   loading: false,
   error: null,
-  stats: null,
+  stats: null
 })
 
 let overviewStarted = false
@@ -23,36 +23,40 @@ const refreshOverview = (): Promise<void> => {
 
   overviewStore.updateSnapshot((current) => ({ ...current, loading: true, error: null }))
 
-  return Promise.all([window.api.eventsList({}), window.api.personsList({}), window.api.syncStatus()])
+  return Promise.all([
+    window.api.eventsList({}),
+    window.api.personsList({}),
+    window.api.syncStatus()
+  ])
     .then(
       ([eventsResult, peopleResult, syncResult]) => {
         if (overviewRequestId !== requestId) {
           return
         }
 
-        if (eventsResult._tag !== "Ok") {
+        if (eventsResult._tag !== 'Ok') {
           overviewStore.updateSnapshot((current) => ({
             ...current,
             loading: false,
-            error: eventsResult.error.message,
+            error: eventsResult.error.message
           }))
           return
         }
 
-        if (peopleResult._tag !== "Ok") {
+        if (peopleResult._tag !== 'Ok') {
           overviewStore.updateSnapshot((current) => ({
             ...current,
             loading: false,
-            error: peopleResult.error.message,
+            error: peopleResult.error.message
           }))
           return
         }
 
-        if (syncResult._tag !== "Ok") {
+        if (syncResult._tag !== 'Ok') {
           overviewStore.updateSnapshot((current) => ({
             ...current,
             loading: false,
-            error: syncResult.error.message,
+            error: syncResult.error.message
           }))
           return
         }
@@ -67,8 +71,8 @@ const refreshOverview = (): Promise<void> => {
             lastAttemptAtMs: syncResult.value.lastAttemptAtMs,
             lastSuccessAtMs: syncResult.value.lastSuccessAtMs,
             lastError: syncResult.value.lastError,
-            recentEvents: eventsResult.value.slice(0, 8),
-          },
+            recentEvents: eventsResult.value.slice(0, 8)
+          }
         })
       },
       (reason) => {
@@ -79,7 +83,7 @@ const refreshOverview = (): Promise<void> => {
         overviewStore.updateSnapshot((current) => ({
           ...current,
           loading: false,
-          error: String(reason),
+          error: String(reason)
         }))
       }
     )
@@ -90,7 +94,7 @@ const refreshOverview = (): Promise<void> => {
 
       overviewStore.updateSnapshot((current) => ({
         ...current,
-        loading: false,
+        loading: false
       }))
     })
 }

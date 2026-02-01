@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { Cause, Effect, Exit, Option, ParseResult, Schema } from 'effect'
-import { IpcResultSchema, IpcRoutes, makeErr, type IpcApi, type IpcResult } from '@satori/ipc-contract/ipc/contract'
+import {
+  IpcResultSchema,
+  IpcRoutes,
+  makeErr,
+  type IpcApi,
+  type IpcResult
+} from '@satori/ipc-contract/ipc/contract'
 import { formatParseIssues } from '@satori/ipc-contract/utils/parseIssue'
 
 class IpcInvokeError extends Schema.TaggedError<IpcInvokeError>('IpcInvokeError')(
@@ -8,7 +14,7 @@ class IpcInvokeError extends Schema.TaggedError<IpcInvokeError>('IpcInvokeError'
   {
     message: Schema.String,
     channel: Schema.String,
-    cause: Schema.Unknown,
+    cause: Schema.Unknown
   }
 ) {}
 
@@ -16,7 +22,7 @@ class ContextBridgeExposeError extends Schema.TaggedError<ContextBridgeExposeErr
   'ContextBridgeExposeError'
 )('ContextBridgeExposeError', {
   message: Schema.String,
-  cause: Schema.Unknown,
+  cause: Schema.Unknown
 }) {}
 
 const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
@@ -27,14 +33,12 @@ const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
   },
   payload: Request
 ): Promise<IpcResult<Response>> => {
-  const encodedPayloadExit = await Effect.runPromiseExit(
-    Schema.encode(route.request)(payload)
-  )
+  const encodedPayloadExit = await Effect.runPromiseExit(Schema.encode(route.request)(payload))
 
   if (Exit.isFailure(encodedPayloadExit)) {
     return makeErr({
       _tag: 'Defect',
-      message: Cause.pretty(encodedPayloadExit.cause),
+      message: Cause.pretty(encodedPayloadExit.cause)
     })
   }
 
@@ -45,8 +49,8 @@ const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
         new IpcInvokeError({
           message: 'Failed to invoke IPC route',
           channel: route.channel,
-          cause,
-        }),
+          cause
+        })
     })
   )
 
@@ -54,12 +58,12 @@ const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
     const failure = Cause.failureOption(rawResultExit.cause)
     const message = Option.match(failure, {
       onNone: () => Cause.pretty(rawResultExit.cause),
-      onSome: (error) => error.message,
+      onSome: (error) => error.message
     })
 
     return makeErr({
       _tag: 'Defect',
-      message,
+      message
     })
   }
 
@@ -76,13 +80,13 @@ const invokeRoute = async <Request, RequestEncoded, Response, ResponseEncoded>(
     return makeErr({
       _tag: 'ResponseDecodeError',
       message: 'Invalid IPC response',
-      issues: formatParseIssues(parseError.value),
+      issues: formatParseIssues(parseError.value)
     })
   }
 
   return makeErr({
     _tag: 'Defect',
-    message: Cause.pretty(resultExit.cause),
+    message: Cause.pretty(resultExit.cause)
   })
 }
 
@@ -140,13 +144,13 @@ const api: IpcApi = {
   photosDelete: (payload) => invokeRoute(IpcRoutes.photosDelete, payload),
   photosGet: (payload) => invokeRoute(IpcRoutes.photosGet, payload),
   syncNow: () => invokeRoute(IpcRoutes.syncNow, undefined),
-  syncStatus: () => invokeRoute(IpcRoutes.syncStatus, undefined),
+  syncStatus: () => invokeRoute(IpcRoutes.syncStatus, undefined)
 }
 
 const versions = {
   electron: process.versions.electron ?? '',
   chrome: process.versions.chrome ?? '',
-  node: process.versions.node ?? '',
+  node: process.versions.node ?? ''
 } as const
 
 // Use `contextBridge` APIs to expose Electron APIs to
@@ -162,8 +166,8 @@ if (process.contextIsolated) {
       catch: (cause) =>
         new ContextBridgeExposeError({
           message: 'Failed to expose preload APIs',
-          cause,
-        }),
+          cause
+        })
     })
   )
 

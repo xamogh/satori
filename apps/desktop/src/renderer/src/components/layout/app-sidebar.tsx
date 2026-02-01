@@ -1,13 +1,7 @@
-import * as React from "react"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from "../ui/sidebar"
-import { NavMain, type NavItem } from "./nav-main"
-import { NavUser } from "./nav-user"
+import * as React from 'react'
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '../ui/sidebar'
+import { NavMain, type NavItem } from './nav-main'
+import { NavUser } from './nav-user'
 
 export type AppSidebarProps<K extends string> = React.ComponentProps<typeof Sidebar> & {
   readonly appName: string
@@ -37,9 +31,7 @@ export const AppSidebar = <K extends string>({
         </div>
         <div className="grid flex-1 text-left text-sm leading-tight">
           <span className="truncate font-semibold">{appName}</span>
-          <span className="truncate text-xs text-sidebar-foreground/60">
-            Admin console
-          </span>
+          <span className="truncate text-xs text-sidebar-foreground/60">Admin console</span>
         </div>
       </div>
     </SidebarHeader>

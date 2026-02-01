@@ -1,15 +1,15 @@
-import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
-import { KeyRound } from "lucide-react"
-import { Button } from "../ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
-import { Input } from "../ui/input"
-import { Label } from "../ui/label"
-import { SchemaIssueList } from "../SchemaIssueList"
-import { Alert, AlertDescription } from "../ui/alert"
+import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
+import { KeyRound } from 'lucide-react'
+import { Button } from '../ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
+import { Input } from '../ui/input'
+import { Label } from '../ui/label'
+import { SchemaIssueList } from '../SchemaIssueList'
+import { Alert, AlertDescription } from '../ui/alert'
 
 export type AuthScreenProps = {
   readonly appName: string
-  readonly mode: "unauthenticated" | "locked"
+  readonly mode: 'unauthenticated' | 'locked'
   readonly email: string
   readonly password: string
   readonly issues: ReadonlyArray<SchemaIssue>
@@ -28,7 +28,7 @@ export const AuthScreen = ({
   error,
   onEmailChange,
   onPasswordChange,
-  onSubmit,
+  onSubmit
 }: AuthScreenProps): React.JSX.Element => (
   <div className="relative flex min-h-screen items-center justify-center p-6">
     {/* Gradient background */}
@@ -43,9 +43,9 @@ export const AuthScreen = ({
         </div>
         <CardTitle className="text-2xl">{appName}</CardTitle>
         <CardDescription>
-          {mode === "locked"
-            ? "Session expired. Please sign in again."
-            : "Sign in to continue to your account"}
+          {mode === 'locked'
+            ? 'Session expired. Please sign in again.'
+            : 'Sign in to continue to your account'}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">

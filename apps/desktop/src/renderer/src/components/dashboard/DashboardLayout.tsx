@@ -1,7 +1,7 @@
-import * as React from "react"
-import { SidebarProvider, SidebarInset } from "../ui/sidebar"
-import { AppSidebar } from "../layout/app-sidebar"
-import { Header } from "../layout/header"
+import * as React from 'react'
+import { SidebarProvider, SidebarInset } from '../ui/sidebar'
+import { AppSidebar } from '../layout/app-sidebar'
+import { Header } from '../layout/header'
 
 export type DashboardNavItem<K extends string> = {
   readonly key: K
@@ -32,7 +32,7 @@ export const DashboardLayout = <K extends string>({
   userEmail,
   userRole,
   onSignOut,
-  children,
+  children
 }: DashboardLayoutProps<K>): React.JSX.Element => (
   <SidebarProvider>
     <a

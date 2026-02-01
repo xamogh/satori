@@ -17,6 +17,7 @@
     "server:create-user": "pnpm -C apps/server create-user --",
     "rebuild:native": "pnpm -C apps/desktop rebuild:native",
     "lint": "eslint --cache .",
+    "lint:fix": "eslint --cache --fix .",
     "format": "prettier --write ."
   },
   "devDependencies": {

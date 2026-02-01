@@ -1,11 +1,11 @@
-import * as React from "react"
+import * as React from 'react'
 import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
-  SidebarMenuItem,
-} from "../ui/sidebar"
+  SidebarMenuItem
+} from '../ui/sidebar'
 
 export type NavItem<K extends string> = {
   readonly key: K
@@ -22,7 +22,7 @@ export type NavMainProps<K extends string> = {
 export const NavMain = <K extends string>({
   items,
   activeKey,
-  onNavigate,
+  onNavigate
 }: NavMainProps<K>): React.JSX.Element => (
   <SidebarGroup>
     <SidebarGroupLabel>Navigation</SidebarGroupLabel>

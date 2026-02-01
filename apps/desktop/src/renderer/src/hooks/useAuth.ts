@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from "react"
-import { Effect } from "effect"
-import { IpcClientService } from "../services/IpcClientService"
-import type { AuthSignInRequest, AuthState } from "@satori/ipc-contract/ipc/contract"
+import { useCallback, useEffect, useState } from 'react'
+import { Effect } from 'effect'
+import { IpcClientService } from '../services/IpcClientService'
+import type { AuthSignInRequest, AuthState } from '@satori/ipc-contract/ipc/contract'
 
-export type AuthViewState = { readonly _tag: "Loading" } | AuthState
+export type AuthViewState = { readonly _tag: 'Loading' } | AuthState
 
 export type UseAuthResult = {
   readonly authState: AuthViewState
@@ -12,14 +12,14 @@ export type UseAuthResult = {
   readonly refreshStatus: () => Promise<AuthState>
 }
 
-const loadingState: AuthViewState = { _tag: "Loading" }
+const loadingState: AuthViewState = { _tag: 'Loading' }
 
 const lockFromAuthenticated = (
-  state: Extract<AuthState, { _tag: "Authenticated" }>
-): Extract<AuthState, { _tag: "Locked" }> => ({
-  _tag: "Locked",
-  reason: "TokenExpired",
-  email: state.email,
+  state: Extract<AuthState, { _tag: 'Authenticated' }>
+): Extract<AuthState, { _tag: 'Locked' }> => ({
+  _tag: 'Locked',
+  reason: 'TokenExpired',
+  email: state.email
 })
 
 export const useAuth = (): UseAuthResult => {
@@ -32,7 +32,7 @@ export const useAuth = (): UseAuthResult => {
     }).pipe(Effect.provide(IpcClientService.Default))
 
     const promise = Effect.runPromise(program)
-    promise.then(setAuthState, () => setAuthState({ _tag: "Unauthenticated" }))
+    promise.then(setAuthState, () => setAuthState({ _tag: 'Unauthenticated' }))
     return promise
   }, [])
 
@@ -41,7 +41,7 @@ export const useAuth = (): UseAuthResult => {
   }, [refreshStatus])
 
   useEffect(() => {
-    if (authState._tag !== "Authenticated") {
+    if (authState._tag !== 'Authenticated') {
       return
     }
 

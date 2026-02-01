@@ -1,10 +1,10 @@
-import type { Event } from "@satori/domain/domain/event"
-import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
-import { CalendarDays, Plus, Search, RefreshCw, AlertCircle } from "lucide-react"
-import { Button } from "../ui/button"
-import { DataTable, type DataTableColumn } from "../data-table/DataTable"
-import { DataTablePagination } from "../data-table/DataTablePagination"
-import { RowActionsMenu } from "../data-table/RowActionsMenu"
+import type { Event } from '@satori/domain/domain/event'
+import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
+import { CalendarDays, Plus, Search, RefreshCw, AlertCircle } from 'lucide-react'
+import { Button } from '../ui/button'
+import { DataTable, type DataTableColumn } from '../data-table/DataTable'
+import { DataTablePagination } from '../data-table/DataTablePagination'
+import { RowActionsMenu } from '../data-table/RowActionsMenu'
 import {
   Dialog,
   DialogContent,
@@ -12,17 +12,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
-} from "../ui/dialog"
-import { Input } from "../ui/input"
-import { Label } from "../ui/label"
-import { Textarea } from "../ui/textarea"
-import { SchemaIssueList } from "../SchemaIssueList"
-import { formatDateTime } from "../../utils/date"
-import { Alert, AlertDescription } from "../ui/alert"
-import { PageHeader, PageContainer } from "../layout/PageHeader"
-import { EmptyState } from "../ui/empty-state"
-import { Badge } from "../ui/badge"
+  DialogDescription
+} from '../ui/dialog'
+import { Input } from '../ui/input'
+import { Label } from '../ui/label'
+import { Textarea } from '../ui/textarea'
+import { SchemaIssueList } from '../SchemaIssueList'
+import { formatDateTime } from '../../utils/date'
+import { Alert, AlertDescription } from '../ui/alert'
+import { PageHeader, PageContainer } from '../layout/PageHeader'
+import { EmptyState } from '../ui/empty-state'
+import { Badge } from '../ui/badge'
 
 export type EventsCreateFormState = {
   readonly open: boolean
@@ -30,7 +30,7 @@ export type EventsCreateFormState = {
   readonly description: string
   readonly startsAt: string
   readonly endsAt: string
-  readonly registrationMode: "PRE_REGISTRATION" | "WALK_IN"
+  readonly registrationMode: 'PRE_REGISTRATION' | 'WALK_IN'
   readonly issues: ReadonlyArray<SchemaIssue>
   readonly error: string | null
   readonly onOpenChange: (open: boolean) => void
@@ -38,7 +38,7 @@ export type EventsCreateFormState = {
   readonly onDescriptionChange: (value: string) => void
   readonly onStartsAtChange: (value: string) => void
   readonly onEndsAtChange: (value: string) => void
-  readonly onRegistrationModeChange: (value: "PRE_REGISTRATION" | "WALK_IN") => void
+  readonly onRegistrationModeChange: (value: 'PRE_REGISTRATION' | 'WALK_IN') => void
   readonly onCancel: () => void
   readonly onSubmit: () => void
 }
@@ -61,21 +61,21 @@ export type EventsPageProps = {
 
 const getEventStatus = (
   event: Event
-): { label: string; variant: "default" | "secondary" | "outline" } => {
+): { label: string; variant: 'default' | 'secondary' | 'outline' } => {
   switch (event.status) {
-    case "ACTIVE":
-      return { label: "Active", variant: "default" }
-    case "CLOSED":
-      return { label: "Closed", variant: "secondary" }
-    case "DRAFT":
-      return { label: "Draft", variant: "outline" }
+    case 'ACTIVE':
+      return { label: 'Active', variant: 'default' }
+    case 'CLOSED':
+      return { label: 'Closed', variant: 'secondary' }
+    case 'DRAFT':
+      return { label: 'Draft', variant: 'outline' }
   }
 }
 
 const eventsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableColumn<Event>> => [
   {
-    id: "event",
-    header: "Event",
+    id: 'event',
+    header: 'Event',
     cell: (event) => (
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -88,11 +88,11 @@ const eventsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableC
           ) : null}
         </div>
       </div>
-    ),
+    )
   },
   {
-    id: "startsAt",
-    header: "Date & Time",
+    id: 'startsAt',
+    header: 'Date & Time',
     cell: (event) => (
       <div className="text-sm">
         <p>{formatDateTime(event.startsAtMs)}</p>
@@ -100,36 +100,36 @@ const eventsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableC
           <p className="text-muted-foreground">to {formatDateTime(event.endsAtMs)}</p>
         ) : null}
       </div>
-    ),
+    )
   },
   {
-    id: "status",
-    header: "Status",
-    headerClassName: "w-[100px]",
+    id: 'status',
+    header: 'Status',
+    headerClassName: 'w-[100px]',
     cell: (event) => {
       const status = getEventStatus(event)
       return <Badge variant={status.variant}>{status.label}</Badge>
-    },
+    }
   },
   {
-    id: "actions",
-    header: "",
-    headerClassName: "w-[56px]",
-    cellClassName: "text-right",
+    id: 'actions',
+    header: '',
+    headerClassName: 'w-[56px]',
+    cellClassName: 'text-right',
     cell: (event) => (
       <RowActionsMenu
         label="Open event actions"
         actions={[
           {
-            id: "delete",
-            label: "Delete",
+            id: 'delete',
+            label: 'Delete',
             destructive: true,
-            onSelect: () => onDelete(event.id),
-          },
+            onSelect: () => onDelete(event.id)
+          }
         ]}
       />
-    ),
-  },
+    )
+  }
 ]
 
 export const EventsPage = ({
@@ -145,18 +145,14 @@ export const EventsPage = ({
   onQueryChange,
   onRefresh,
   onDelete,
-  create,
+  create
 }: EventsPageProps): React.JSX.Element => (
   <PageContainer>
     <PageHeader
       icon={<CalendarDays className="h-5 w-5" />}
       title="Events"
       description="Create and manage monastery events and activities."
-      badge={
-        eventsTotal > 0 ? (
-          <Badge variant="secondary">{eventsTotal} total</Badge>
-        ) : null
-      }
+      badge={eventsTotal > 0 ? <Badge variant="secondary">{eventsTotal} total</Badge> : null}
       actions={
         <Dialog open={create.open} onOpenChange={create.onOpenChange}>
           <DialogTrigger asChild>
@@ -168,9 +164,7 @@ export const EventsPage = ({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Event</DialogTitle>
-              <DialogDescription>
-                Add a new event to your calendar.
-              </DialogDescription>
+              <DialogDescription>Add a new event to your calendar.</DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-4">
@@ -202,7 +196,7 @@ export const EventsPage = ({
                   value={create.registrationMode}
                   onChange={(event) =>
                     create.onRegistrationModeChange(
-                      event.target.value === "WALK_IN" ? "WALK_IN" : "PRE_REGISTRATION"
+                      event.target.value === 'WALK_IN' ? 'WALK_IN' : 'PRE_REGISTRATION'
                     )
                   }
                   className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -272,8 +266,8 @@ export const EventsPage = ({
         />
       </div>
       <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
-        <RefreshCw className={loading ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
-        {loading ? "Loading..." : "Refresh"}
+        <RefreshCw className={loading ? 'mr-2 h-4 w-4 animate-spin' : 'mr-2 h-4 w-4'} />
+        {loading ? 'Loading...' : 'Refresh'}
       </Button>
     </div>
 
@@ -281,7 +275,9 @@ export const EventsPage = ({
       <EmptyState
         icon={<CalendarDays className="h-6 w-6" />}
         title="No events found"
-        description={query ? "Try adjusting your search terms." : "Get started by creating your first event."}
+        description={
+          query ? 'Try adjusting your search terms.' : 'Get started by creating your first event.'
+        }
         action={
           !query ? (
             <Button size="sm" onClick={() => create.onOpenChange(true)}>

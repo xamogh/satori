@@ -1,10 +1,10 @@
-import { createServer } from "node:http"
-import { HttpApiBuilder, HttpMiddleware, HttpServer } from "@effect/platform"
-import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
-import { Effect, Layer, Logger, LogLevel } from "effect"
-import { Api } from "@satori/api-contract/api/api-definition"
-import { BearerAuthMiddlewareLive } from "./services/auth/bearer-auth.middleware"
-import { ApiGroupsLive } from "./services/api-groups"
+import { createServer } from 'node:http'
+import { HttpApiBuilder, HttpMiddleware, HttpServer } from '@effect/platform'
+import { NodeHttpServer, NodeRuntime } from '@effect/platform-node'
+import { Effect, Layer, Logger, LogLevel } from 'effect'
+import { Api } from '@satori/api-contract/api/api-definition'
+import { BearerAuthMiddlewareLive } from './services/auth/bearer-auth.middleware'
+import { ApiGroupsLive } from './services/api-groups'
 
 const parsePort = (raw: string | undefined): number => {
   const parsed = Number(raw)
@@ -13,7 +13,7 @@ const parsePort = (raw: string | undefined): number => {
 
 const SERVER_PORT = parsePort(process.env.PORT)
 
-const isDev = (process.env.ENV ?? process.env.STAGE ?? "dev") === "dev"
+const isDev = (process.env.ENV ?? process.env.STAGE ?? 'dev') === 'dev'
 
 const loggingLayer = Layer.mergeAll(
   Logger.pretty,
