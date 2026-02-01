@@ -96,3 +96,9 @@ export class OutboxEncodeError extends Schema.TaggedError<OutboxEncodeError>('Ou
     cause: Schema.Unknown
   }
 ) {}
+
+export class InvalidOperationError extends Schema.TaggedError<InvalidOperationError>(
+  'InvalidOperationError'
+)('InvalidOperationError', {
+  message: Schema.String
+}) {}

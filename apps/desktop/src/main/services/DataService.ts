@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { Effect, Option, Schema } from 'effect'
 import { LocalDbService, type LocalDbClient } from './LocalDbService'
-import { EntityNotFoundError, OutboxEncodeError } from '../errors'
+import { EntityNotFoundError, InvalidOperationError, OutboxEncodeError } from '../errors'
 import type { LocalDbQueryError } from '../errors'
 import {
   EventSchema,
@@ -89,10 +89,41 @@ import {
   type PhotoCreateInput,
   type PhotoDeleteInput
 } from '@satori/domain/domain/photo'
+import { EntityIdSchema, Nullable, TimestampMsSchema } from '@satori/domain/domain/common'
 import { toSqliteBoolean } from '../utils/sqlite'
 import { SyncOperationSchema } from '@satori/domain/sync/schemas'
 
 const nowMs = (): number => Date.now()
+const MS_PER_DAY = 86_400_000
+
+const startOfUtcDayMs = (timestampMs: number): number => {
+  const date = new Date(timestampMs)
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+}
+
+const buildEventDays = (
+  startsAtMs: number,
+  endsAtMs: number | null
+): Effect.Effect<ReadonlyArray<{ readonly dayNumber: number; readonly dateMs: number }>, InvalidOperationError> =>
+  Effect.suspend(() => {
+    const startMs = startOfUtcDayMs(startsAtMs)
+    const endMs = startOfUtcDayMs(endsAtMs ?? startsAtMs)
+
+    if (endMs < startMs) {
+      return Effect.fail(
+        new InvalidOperationError({ message: 'End date must be after start date.' })
+      )
+    }
+
+    const dayCount = Math.floor((endMs - startMs) / MS_PER_DAY) + 1
+
+    return Effect.succeed(
+      Array.from({ length: dayCount }, (_, index) => ({
+        dayNumber: index + 1,
+        dateMs: startMs + index * MS_PER_DAY
+      }))
+    )
+  })
 
 const escapeLike = (query: string): string =>
   query.replaceAll('~', '~~').replaceAll('%', '~%').replaceAll('_', '~_')
@@ -109,9 +140,23 @@ const encodeSyncOperationJson = (
         new OutboxEncodeError({
           message: 'Failed to encode outbox operation',
           cause: error
-        })
+      })
     )
   )
+
+const EventDatesSchema = Schema.Struct({
+  id: EntityIdSchema,
+  startsAtMs: TimestampMsSchema,
+  endsAtMs: Nullable(TimestampMsSchema)
+})
+
+const CountSchema = Schema.Struct({
+  count: Schema.Number
+})
+
+const EntityIdRowSchema = Schema.Struct({
+  id: EntityIdSchema
+})
 
 const makeDataService = Effect.gen(function* () {
   const db = yield* LocalDbService
@@ -168,7 +213,7 @@ order by starts_at_ms desc
 
   const eventsCreate = (
     input: EventCreateInput
-  ): Effect.Effect<Event, LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<Event, LocalDbQueryError | OutboxEncodeError | InvalidOperationError> =>
     Effect.gen(function* () {
       const timestampMs = nowMs()
       const event: Event = {
@@ -187,15 +232,16 @@ order by starts_at_ms desc
         serverModifiedAtMs: null
       }
 
-      const eventDay: EventDay = {
+      const eventDays = yield* buildEventDays(event.startsAtMs, event.endsAtMs)
+      const eventDayRecords: ReadonlyArray<EventDay> = eventDays.map((day) => ({
         id: randomUUID(),
         eventId: event.id,
-        dayNumber: 1,
-        dateMs: event.startsAtMs,
+        dayNumber: day.dayNumber,
+        dateMs: day.dateMs,
         updatedAtMs: timestampMs,
         deletedAtMs: null,
         serverModifiedAtMs: null
-      }
+      }))
 
       const eventOp = {
         _tag: 'EventUpsert',
@@ -203,19 +249,26 @@ order by starts_at_ms desc
         event
       } as const
 
-      const eventDayOp = {
+      const eventDayOps: ReadonlyArray<{
+        readonly _tag: 'EventDayUpsert'
+        readonly opId: string
+        readonly eventDay: EventDay
+      }> = eventDayRecords.map((eventDay) => ({
         _tag: 'EventDayUpsert',
         opId: randomUUID(),
         eventDay
-      } as const
+      }))
 
       const eventJson = yield* encodeSyncOperationJson(eventOp)
-      const eventDayJson = yield* encodeSyncOperationJson(eventDayOp)
+      const eventDayOutboxEntries = yield* Effect.forEach(eventDayOps, (op) =>
+        encodeSyncOperationJson(op).pipe(Effect.map((json) => ({ opId: op.opId, json })))
+      )
 
       yield* db.transaction((tx) =>
-        tx
-          .run(
-            `
+        Effect.gen(function* () {
+          yield* tx
+            .run(
+              `
 insert into events (
   id,
   parent_event_id,
@@ -244,28 +297,28 @@ on conflict(id) do update set
   updated_at_ms = excluded.updated_at_ms,
   deleted_at_ms = excluded.deleted_at_ms
 `,
-            [
-              event.id,
-              event.parentEventId,
-              event.name,
-              event.description,
-              event.registrationMode,
-              event.status,
-              event.startsAtMs,
-              event.endsAtMs,
-              event.empowermentId,
-              event.guruId,
-              event.updatedAtMs,
-              event.deletedAtMs,
-              event.serverModifiedAtMs
-            ]
-          )
-          .pipe(
-            Effect.asVoid,
-            Effect.zipRight(
-              tx
-                .run(
-                  `
+              [
+                event.id,
+                event.parentEventId,
+                event.name,
+                event.description,
+                event.registrationMode,
+                event.status,
+                event.startsAtMs,
+                event.endsAtMs,
+                event.empowermentId,
+                event.guruId,
+                event.updatedAtMs,
+                event.deletedAtMs,
+                event.serverModifiedAtMs
+              ]
+            )
+            .pipe(Effect.asVoid)
+
+          yield* Effect.forEach(eventDayRecords, (eventDay) =>
+            tx
+              .run(
+                `
 insert into event_days (
   id, event_id, day_number, date_ms, updated_at_ms, deleted_at_ms, server_modified_at_ms
 ) values (?, ?, ?, ?, ?, ?, ?)
@@ -276,21 +329,24 @@ on conflict(id) do update set
   updated_at_ms = excluded.updated_at_ms,
   deleted_at_ms = excluded.deleted_at_ms
 `,
-                  [
-                    eventDay.id,
-                    eventDay.eventId,
-                    eventDay.dayNumber,
-                    eventDay.dateMs,
-                    eventDay.updatedAtMs,
-                    eventDay.deletedAtMs,
-                    eventDay.serverModifiedAtMs
-                  ]
-                )
-                .pipe(Effect.asVoid)
-            ),
-            Effect.zipRight(insertOutbox(tx, eventOp.opId, eventJson)),
-            Effect.zipRight(insertOutbox(tx, eventDayOp.opId, eventDayJson))
+                [
+                  eventDay.id,
+                  eventDay.eventId,
+                  eventDay.dayNumber,
+                  eventDay.dateMs,
+                  eventDay.updatedAtMs,
+                  eventDay.deletedAtMs,
+                  eventDay.serverModifiedAtMs
+                ]
+              )
+              .pipe(Effect.asVoid)
           )
+
+          yield* insertOutbox(tx, eventOp.opId, eventJson)
+          yield* Effect.forEach(eventDayOutboxEntries, (entry) =>
+            insertOutbox(tx, entry.opId, entry.json)
+          )
+        })
       )
 
       return event
@@ -298,7 +354,10 @@ on conflict(id) do update set
 
   const eventsUpdate = (
     input: EventUpdateInput
-  ): Effect.Effect<Event, LocalDbQueryError | OutboxEncodeError> =>
+  ): Effect.Effect<
+    Event,
+    LocalDbQueryError | OutboxEncodeError | EntityNotFoundError | InvalidOperationError
+  > =>
     Effect.gen(function* () {
       const timestampMs = nowMs()
       const event: Event = {
@@ -326,9 +385,65 @@ on conflict(id) do update set
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
-        tx
-          .run(
+        Effect.gen(function* () {
+          const existing = yield* tx.get(
             `
+select
+  id,
+  starts_at_ms as startsAtMs,
+  ends_at_ms as endsAtMs
+from events
+where id = ? and deleted_at_ms is null
+`,
+            EventDatesSchema,
+            [event.id]
+          )
+
+          const current = yield* Option.match(existing, {
+            onNone: () =>
+              Effect.fail(
+                new EntityNotFoundError({ message: 'Event not found', entity: 'Event', id: event.id })
+              ),
+            onSome: (value) => Effect.succeed(value)
+          })
+          const currentDays = yield* buildEventDays(current.startsAtMs, current.endsAtMs)
+          const nextDays = yield* buildEventDays(event.startsAtMs, event.endsAtMs)
+          const daysChanged =
+            currentDays.length !== nextDays.length ||
+            currentDays.some(
+              (day, index) =>
+                day.dayNumber !== nextDays[index]?.dayNumber || day.dateMs !== nextDays[index]?.dateMs
+            )
+
+          if (daysChanged) {
+            const attendanceCount = yield* tx.get(
+              `
+select count(1) as count
+from event_day_attendance eda
+inner join event_days ed on ed.id = eda.event_day_id
+where ed.event_id = ? and eda.deleted_at_ms is null
+`,
+              CountSchema,
+              [event.id]
+            )
+
+            const attendanceTotal = Option.match(attendanceCount, {
+              onNone: () => 0,
+              onSome: (row) => row.count
+            })
+
+            if (attendanceTotal > 0) {
+              yield* Effect.fail(
+                new InvalidOperationError({
+                  message: 'Cannot change event dates after attendance has been recorded.'
+                })
+              )
+            }
+          }
+
+          yield* tx
+            .run(
+              `
 insert into events (
   id,
   parent_event_id,
@@ -357,23 +472,123 @@ on conflict(id) do update set
   updated_at_ms = excluded.updated_at_ms,
   deleted_at_ms = excluded.deleted_at_ms
 `,
-            [
-              event.id,
-              event.parentEventId,
-              event.name,
-              event.description,
-              event.registrationMode,
-              event.status,
-              event.startsAtMs,
-              event.endsAtMs,
-              event.empowermentId,
-              event.guruId,
-              event.updatedAtMs,
-              event.deletedAtMs,
-              event.serverModifiedAtMs
-            ]
-          )
-          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
+              [
+                event.id,
+                event.parentEventId,
+                event.name,
+                event.description,
+                event.registrationMode,
+                event.status,
+                event.startsAtMs,
+                event.endsAtMs,
+                event.empowermentId,
+                event.guruId,
+                event.updatedAtMs,
+                event.deletedAtMs,
+                event.serverModifiedAtMs
+              ]
+            )
+            .pipe(Effect.asVoid)
+
+          yield* insertOutbox(tx, syncOp.opId, opJson)
+
+          if (daysChanged) {
+            const existingDayRows = yield* tx.all(
+              `
+select id
+from event_days
+where event_id = ? and deleted_at_ms is null
+`,
+              EntityIdRowSchema,
+              [event.id]
+            )
+
+            const deleteOps: ReadonlyArray<{
+              readonly _tag: 'EventDayDelete'
+              readonly opId: string
+              readonly eventDayId: string
+              readonly deletedAtMs: number
+            }> = existingDayRows.map((row) => ({
+              _tag: 'EventDayDelete',
+              opId: randomUUID(),
+              eventDayId: row.id,
+              deletedAtMs: timestampMs
+            }))
+
+            const deleteOutboxEntries = yield* Effect.forEach(deleteOps, (op) =>
+              encodeSyncOperationJson(op).pipe(Effect.map((json) => ({ opId: op.opId, json })))
+            )
+
+            yield* tx
+              .run(
+                `
+update event_days
+set deleted_at_ms = ?, updated_at_ms = ?
+where event_id = ? and deleted_at_ms is null
+`,
+                [timestampMs, timestampMs, event.id]
+              )
+              .pipe(Effect.asVoid)
+
+            const newDayRecords: ReadonlyArray<EventDay> = nextDays.map((day) => ({
+              id: randomUUID(),
+              eventId: event.id,
+              dayNumber: day.dayNumber,
+              dateMs: day.dateMs,
+              updatedAtMs: timestampMs,
+              deletedAtMs: null,
+              serverModifiedAtMs: null
+            }))
+
+            const newDayOps: ReadonlyArray<{
+              readonly _tag: 'EventDayUpsert'
+              readonly opId: string
+              readonly eventDay: EventDay
+            }> = newDayRecords.map((eventDay) => ({
+              _tag: 'EventDayUpsert',
+              opId: randomUUID(),
+              eventDay
+            }))
+
+            const newDayOutboxEntries = yield* Effect.forEach(newDayOps, (op) =>
+              encodeSyncOperationJson(op).pipe(Effect.map((json) => ({ opId: op.opId, json })))
+            )
+
+            yield* Effect.forEach(newDayRecords, (eventDay) =>
+              tx
+                .run(
+                  `
+insert into event_days (
+  id, event_id, day_number, date_ms, updated_at_ms, deleted_at_ms, server_modified_at_ms
+) values (?, ?, ?, ?, ?, ?, ?)
+on conflict(id) do update set
+  event_id = excluded.event_id,
+  day_number = excluded.day_number,
+  date_ms = excluded.date_ms,
+  updated_at_ms = excluded.updated_at_ms,
+  deleted_at_ms = excluded.deleted_at_ms
+`,
+                  [
+                    eventDay.id,
+                    eventDay.eventId,
+                    eventDay.dayNumber,
+                    eventDay.dateMs,
+                    eventDay.updatedAtMs,
+                    eventDay.deletedAtMs,
+                    eventDay.serverModifiedAtMs
+                  ]
+                )
+                .pipe(Effect.asVoid)
+            )
+
+            yield* Effect.forEach(deleteOutboxEntries, (entry) =>
+              insertOutbox(tx, entry.opId, entry.json)
+            )
+            yield* Effect.forEach(newDayOutboxEntries, (entry) =>
+              insertOutbox(tx, entry.opId, entry.json)
+            )
+          }
+        })
       )
 
       return event
@@ -395,13 +610,129 @@ on conflict(id) do update set
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
-        tx
-          .run('update events set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
-            deletedAtMs,
-            deletedAtMs,
-            id
-          ])
-          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
+        Effect.gen(function* () {
+          const eventDayRows = yield* tx.all(
+            `
+select id
+from event_days
+where event_id = ? and deleted_at_ms is null
+`,
+            EntityIdRowSchema,
+            [id]
+          )
+
+          const attendeeRows = yield* tx.all(
+            `
+select id
+from event_attendees
+where event_id = ? and deleted_at_ms is null
+`,
+            EntityIdRowSchema,
+            [id]
+          )
+
+          const attendanceRows = yield* tx.all(
+            `
+select eda.id as id
+from event_day_attendance eda
+inner join event_days ed on ed.id = eda.event_day_id
+where ed.event_id = ? and eda.deleted_at_ms is null
+`,
+            EntityIdRowSchema,
+            [id]
+          )
+
+          yield* tx
+            .run('update events set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
+              deletedAtMs,
+              deletedAtMs,
+              id
+            ])
+            .pipe(Effect.asVoid)
+
+          yield* tx
+            .run(
+              'update event_days set deleted_at_ms = ?, updated_at_ms = ? where event_id = ? and deleted_at_ms is null',
+              [deletedAtMs, deletedAtMs, id]
+            )
+            .pipe(Effect.asVoid)
+
+          yield* tx
+            .run(
+              'update event_attendees set deleted_at_ms = ?, updated_at_ms = ? where event_id = ? and deleted_at_ms is null',
+              [deletedAtMs, deletedAtMs, id]
+            )
+            .pipe(Effect.asVoid)
+
+          yield* tx
+            .run(
+              `
+update event_day_attendance
+set deleted_at_ms = ?, updated_at_ms = ?
+where event_day_id in (select id from event_days where event_id = ?)
+`,
+              [deletedAtMs, deletedAtMs, id]
+            )
+            .pipe(Effect.asVoid)
+
+          yield* insertOutbox(tx, syncOp.opId, opJson)
+
+          const eventDayDeleteOps: ReadonlyArray<{
+            readonly _tag: 'EventDayDelete'
+            readonly opId: string
+            readonly eventDayId: string
+            readonly deletedAtMs: number
+          }> = eventDayRows.map((row) => ({
+            _tag: 'EventDayDelete',
+            opId: randomUUID(),
+            eventDayId: row.id,
+            deletedAtMs
+          }))
+
+          const attendeeDeleteOps: ReadonlyArray<{
+            readonly _tag: 'EventAttendeeDelete'
+            readonly opId: string
+            readonly attendeeId: string
+            readonly deletedAtMs: number
+          }> = attendeeRows.map((row) => ({
+            _tag: 'EventAttendeeDelete',
+            opId: randomUUID(),
+            attendeeId: row.id,
+            deletedAtMs
+          }))
+
+          const attendanceDeleteOps: ReadonlyArray<{
+            readonly _tag: 'AttendanceDelete'
+            readonly opId: string
+            readonly attendanceId: string
+            readonly deletedAtMs: number
+          }> = attendanceRows.map((row) => ({
+            _tag: 'AttendanceDelete',
+            opId: randomUUID(),
+            attendanceId: row.id,
+            deletedAtMs
+          }))
+
+          const eventDayOutboxEntries = yield* Effect.forEach(eventDayDeleteOps, (op) =>
+            encodeSyncOperationJson(op).pipe(Effect.map((json) => ({ opId: op.opId, json })))
+          )
+          const attendeeOutboxEntries = yield* Effect.forEach(attendeeDeleteOps, (op) =>
+            encodeSyncOperationJson(op).pipe(Effect.map((json) => ({ opId: op.opId, json })))
+          )
+          const attendanceOutboxEntries = yield* Effect.forEach(attendanceDeleteOps, (op) =>
+            encodeSyncOperationJson(op).pipe(Effect.map((json) => ({ opId: op.opId, json })))
+          )
+
+          yield* Effect.forEach(eventDayOutboxEntries, (entry) =>
+            insertOutbox(tx, entry.opId, entry.json)
+          )
+          yield* Effect.forEach(attendeeOutboxEntries, (entry) =>
+            insertOutbox(tx, entry.opId, entry.json)
+          )
+          yield* Effect.forEach(attendanceOutboxEntries, (entry) =>
+            insertOutbox(tx, entry.opId, entry.json)
+          )
+        })
       )
 
       return 'ok' as const
@@ -1517,13 +1848,54 @@ on conflict(id) do update set
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
       yield* db.transaction((tx) =>
-        tx
-          .run('update groups set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
-            deletedAtMs,
-            deletedAtMs,
-            id
-          ])
-          .pipe(Effect.asVoid, Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson)))
+        Effect.gen(function* () {
+          const memberRows = yield* tx.all(
+            `
+select id
+from person_groups
+where group_id = ? and deleted_at_ms is null
+`,
+            EntityIdRowSchema,
+            [id]
+          )
+
+          yield* tx
+            .run('update groups set deleted_at_ms = ?, updated_at_ms = ? where id = ?', [
+              deletedAtMs,
+              deletedAtMs,
+              id
+            ])
+            .pipe(Effect.asVoid)
+
+          yield* tx
+            .run(
+              'update person_groups set deleted_at_ms = ?, updated_at_ms = ? where group_id = ? and deleted_at_ms is null',
+              [deletedAtMs, deletedAtMs, id]
+            )
+            .pipe(Effect.asVoid)
+
+          yield* insertOutbox(tx, syncOp.opId, opJson)
+
+          const personGroupDeleteOps: ReadonlyArray<{
+            readonly _tag: 'PersonGroupDelete'
+            readonly opId: string
+            readonly personGroupId: string
+            readonly deletedAtMs: number
+          }> = memberRows.map((row) => ({
+            _tag: 'PersonGroupDelete',
+            opId: randomUUID(),
+            personGroupId: row.id,
+            deletedAtMs
+          }))
+
+          const personGroupOutboxEntries = yield* Effect.forEach(personGroupDeleteOps, (op) =>
+            encodeSyncOperationJson(op).pipe(Effect.map((json) => ({ opId: op.opId, json })))
+          )
+
+          yield* Effect.forEach(personGroupOutboxEntries, (entry) =>
+            insertOutbox(tx, entry.opId, entry.json)
+          )
+        })
       )
 
       return 'ok' as const
