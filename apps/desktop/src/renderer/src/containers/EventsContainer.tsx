@@ -1,25 +1,22 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
-import { Either, Schema } from 'effect'
-import { EventsPage } from '../components/pages/EventsPage'
-import { EventCreateInputSchema, type Event } from '@satori/domain/domain/event'
-import { formatParseIssues } from '@satori/ipc-contract/utils/parseIssue'
+import { useForm } from '@tanstack/react-form'
+import { Either } from 'effect'
+import { EventsPage, type EventsCreateFormValues } from '../components/pages/EventsPage'
+import {
+  EventCreateInputSchema,
+  type Event,
+  type EventCreateInput
+} from '@satori/domain/domain/event'
 import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
 import { createStore } from '../utils/store'
 import { clampPageIndex, slicePage } from '../utils/pagination'
+import { createSchemaFormValidator } from '../utils/formValidation'
+import { parseDateTimeLocalMs } from '../utils/date'
+import { trimToNull } from '../utils/string'
 
 const normalizeQuery = (raw: string): string | undefined => {
   const trimmed = raw.trim()
   return trimmed.length === 0 ? undefined : trimmed
-}
-
-const parseDateTimeLocalMs = (raw: string): number | null => {
-  const trimmed = raw.trim()
-  if (trimmed.length === 0) {
-    return null
-  }
-
-  const ms = Date.parse(trimmed)
-  return Number.isFinite(ms) ? ms : null
 }
 
 type EventsListState = {
@@ -115,14 +112,6 @@ export const EventsContainer = (): React.JSX.Element => {
   )
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [createName, setCreateName] = useState('')
-  const [createDescription, setCreateDescription] = useState('')
-  const [createStartsAt, setCreateStartsAt] = useState('')
-  const [createEndsAt, setCreateEndsAt] = useState('')
-  const [createRegistrationMode, setCreateRegistrationMode] = useState<
-    'PRE_REGISTRATION' | 'WALK_IN'
-  >('PRE_REGISTRATION')
-  const [createIssues, setCreateIssues] = useState<ReadonlyArray<SchemaIssue>>([])
   const [createError, setCreateError] = useState<string | null>(null)
 
   const refresh = useCallback((): void => {
@@ -130,65 +119,89 @@ export const EventsContainer = (): React.JSX.Element => {
     void refreshEventsList(normalizedQuery)
   }, [normalizedQuery])
 
+  const buildEventCreateInput = useCallback(
+    (values: EventsCreateFormValues): Either.Either<EventCreateInput, ReadonlyArray<SchemaIssue>> => {
+      const startsAtMs = parseDateTimeLocalMs(values.startsAt)
+      if (startsAtMs === null) {
+        return Either.left([
+          {
+            path: ['startsAt'],
+            message: 'Start date/time is required.'
+          }
+        ])
+      }
+
+      const endsAtMs = parseDateTimeLocalMs(values.endsAt)
+      if (values.endsAt.trim().length > 0 && endsAtMs === null) {
+        return Either.left([
+          {
+            path: ['endsAt'],
+            message: 'End date/time is invalid.'
+          }
+        ])
+      }
+
+      return Either.right({
+        parentEventId: null,
+        name: values.name,
+        description: trimToNull(values.description),
+        registrationMode: values.registrationMode,
+        status: 'DRAFT',
+        startsAtMs,
+        endsAtMs,
+        empowermentId: null,
+        guruId: null
+      })
+    },
+    []
+  )
+
+  const eventCreateDefaults: EventsCreateFormValues = {
+    name: '',
+    description: '',
+    startsAt: '',
+    endsAt: '',
+    registrationMode: 'PRE_REGISTRATION'
+  }
+
+  const eventCreateForm = useForm({
+    defaultValues: eventCreateDefaults,
+    validators: {
+      onSubmit: createSchemaFormValidator(EventCreateInputSchema, buildEventCreateInput, {
+        fieldNameMap: {
+          startsAtMs: 'startsAt',
+          endsAtMs: 'endsAt'
+        }
+      })
+    },
+    onSubmit: ({ value, formApi }) => {
+      setCreateError(null)
+      const input = buildEventCreateInput(value)
+      if (Either.isLeft(input)) {
+        return
+      }
+
+      return window.api.eventsCreate(input.right).then(
+        (result) => {
+          if (result._tag === 'Ok') {
+            setCreateOpen(false)
+            formApi.reset()
+            refresh()
+            return
+          }
+
+          setCreateError(result.error.message)
+        },
+        (reason) => setCreateError(String(reason))
+      )
+    }
+  })
+
   const cancelCreate = useCallback((): void => {
     setCreateOpen(false)
-    setCreateIssues([])
     setCreateError(null)
-  }, [])
-
-  const submitCreate = useCallback((): void => {
-    setCreateError(null)
-
-    const startsAtMs = parseDateTimeLocalMs(createStartsAt)
-    if (startsAtMs === null) {
-      setCreateIssues([])
-      setCreateError('Start date/time is required.')
-      return
-    }
-
-    const endsAtMs = parseDateTimeLocalMs(createEndsAt)
-    if (createEndsAt.trim().length > 0 && endsAtMs === null) {
-      setCreateIssues([])
-      setCreateError('End date/time is invalid.')
-      return
-    }
-
-    const decoded = Schema.decodeUnknownEither(EventCreateInputSchema)({
-      parentEventId: null,
-      name: createName,
-      description: createDescription.trim().length === 0 ? null : createDescription,
-      registrationMode: createRegistrationMode,
-      status: 'DRAFT',
-      startsAtMs,
-      endsAtMs,
-      empowermentId: null,
-      guruId: null
-    })
-
-    if (Either.isLeft(decoded)) {
-      setCreateIssues(formatParseIssues(decoded.left))
-      return
-    }
-
-    setCreateIssues([])
-    window.api.eventsCreate(decoded.right).then(
-      (result) => {
-        if (result._tag === 'Ok') {
-          setCreateOpen(false)
-          setCreateName('')
-          setCreateDescription('')
-          setCreateStartsAt('')
-          setCreateEndsAt('')
-          setCreateRegistrationMode('PRE_REGISTRATION')
-          refresh()
-          return
-        }
-
-        setCreateError(result.error.message)
-      },
-      (reason) => setCreateError(String(reason))
-    )
-  }, [createDescription, createEndsAt, createStartsAt, createName, createRegistrationMode, refresh])
+    eventCreateForm.reset()
+  }, [eventCreateForm])
 
   const deleteEvent = useCallback(
     (id: string): void => {
@@ -235,27 +248,16 @@ export const EventsContainer = (): React.JSX.Element => {
       onDelete={deleteEvent}
       create={{
         open: createOpen,
-        name: createName,
-        description: createDescription,
-        startsAt: createStartsAt,
-        endsAt: createEndsAt,
-        registrationMode: createRegistrationMode,
-        issues: createIssues,
+        form: eventCreateForm,
         error: createError,
         onOpenChange: (open) => {
           setCreateOpen(open)
           if (!open) {
-            setCreateIssues([])
             setCreateError(null)
+            eventCreateForm.reset()
           }
         },
-        onNameChange: setCreateName,
-        onDescriptionChange: setCreateDescription,
-        onStartsAtChange: setCreateStartsAt,
-        onEndsAtChange: setCreateEndsAt,
-        onRegistrationModeChange: setCreateRegistrationMode,
-        onCancel: cancelCreate,
-        onSubmit: submitCreate
+        onCancel: cancelCreate
       }}
     />
   )

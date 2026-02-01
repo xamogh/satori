@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, CloudSync, LayoutDashboard, Users } from 'lucide-react'
+import { CalendarDays, CheckCircle2, CloudSync, LayoutDashboard, Users } from 'lucide-react'
 import type { AuthenticatedState } from '@satori/domain/auth/schemas'
 import { DashboardLayout } from '../components/dashboard/DashboardLayout'
 import {
@@ -9,6 +9,8 @@ import {
 import { OverviewContainer } from './OverviewContainer'
 import { EventsContainer } from './EventsContainer'
 import { PeopleContainer } from './PeopleContainer'
+import { GroupsContainer } from './GroupsContainer'
+import { AttendanceContainer } from './AttendanceContainer'
 import { SyncContainer } from './SyncContainer'
 import { Alert, AlertDescription } from '../components/ui/alert'
 
@@ -45,6 +47,16 @@ export const DashboardContainer = ({
           icon: <Users className="h-4 w-4" />
         },
         {
+          key: DashboardRoute.groups,
+          label: 'Groups',
+          icon: <Users className="h-4 w-4" />
+        },
+        {
+          key: DashboardRoute.attendance,
+          label: 'Attendance',
+          icon: <CheckCircle2 className="h-4 w-4" />
+        },
+        {
           key: DashboardRoute.sync,
           label: 'Sync',
           icon: <CloudSync className="h-4 w-4" />
@@ -74,6 +86,8 @@ export const DashboardContainer = ({
       {route === DashboardRoute.overview ? <OverviewContainer /> : null}
       {route === DashboardRoute.events ? <EventsContainer /> : null}
       {route === DashboardRoute.people ? <PeopleContainer /> : null}
+      {route === DashboardRoute.groups ? <GroupsContainer /> : null}
+      {route === DashboardRoute.attendance ? <AttendanceContainer /> : null}
       {route === DashboardRoute.sync ? <SyncContainer /> : null}
     </DashboardLayout>
   )

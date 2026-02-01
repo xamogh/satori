@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import type { Person } from '@satori/domain/domain/person'
-import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
 import { Users, Plus, Search, RefreshCw, AlertCircle, Mail, Phone, Image } from 'lucide-react'
 import { Button } from '../ui/button'
 import { DataTable, type DataTableColumn } from '../data-table/DataTable'
@@ -17,32 +16,29 @@ import {
 } from '../ui/dialog'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
-import { SchemaIssueList } from '../SchemaIssueList'
 import { Alert, AlertDescription } from '../ui/alert'
 import { PageHeader, PageContainer } from '../layout/PageHeader'
 import { EmptyState } from '../ui/empty-state'
 import { Badge } from '../ui/badge'
 import { Avatar, AvatarFallback } from '../ui/avatar'
+import { FormFieldError } from '../forms/FormFieldError'
+import type { FormApiFor } from '../../utils/formTypes'
 
-export type PeopleCreateFormState = {
-  readonly open: boolean
+export type PeopleCreateFormValues = {
   readonly firstName: string
   readonly middleName: string
   readonly lastName: string
   readonly email: string
   readonly phone1: string
   readonly phone2: string
-  readonly issues: ReadonlyArray<SchemaIssue>
+}
+
+export type PeopleCreateFormState = {
+  readonly open: boolean
+  readonly form: FormApiFor<PeopleCreateFormValues>
   readonly error: string | null
   readonly onOpenChange: (open: boolean) => void
-  readonly onFirstNameChange: (value: string) => void
-  readonly onMiddleNameChange: (value: string) => void
-  readonly onLastNameChange: (value: string) => void
-  readonly onEmailChange: (value: string) => void
-  readonly onPhone1Change: (value: string) => void
-  readonly onPhone2Change: (value: string) => void
   readonly onCancel: () => void
-  readonly onSubmit: () => void
 }
 
 export type PeoplePhotoDialogState = {
@@ -194,85 +190,139 @@ export const PeoplePage = ({
               <DialogDescription>Add a new person to your directory.</DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="person-first-name">First name</Label>
-                <Input
-                  id="person-first-name"
-                  value={create.firstName}
-                  onChange={(event) => create.onFirstNameChange(event.target.value)}
-                  placeholder="Jane"
-                />
+            <form
+              onSubmit={(event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                void create.form.handleSubmit()
+              }}
+            >
+              <div className="grid gap-4 py-4">
+                <create.form.Field name="firstName">
+                  {(field) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor={field.name}>First name</Label>
+                      <Input
+                        id={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        placeholder="Jane"
+                      />
+                      <FormFieldError errors={field.state.meta.errors} />
+                    </div>
+                  )}
+                </create.form.Field>
+
+                <create.form.Field name="middleName">
+                  {(field) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor={field.name}>Middle name</Label>
+                      <Input
+                        id={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        placeholder="Optional"
+                      />
+                      <FormFieldError errors={field.state.meta.errors} />
+                    </div>
+                  )}
+                </create.form.Field>
+
+                <create.form.Field name="lastName">
+                  {(field) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor={field.name}>Last name</Label>
+                      <Input
+                        id={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        placeholder="Doe"
+                      />
+                      <FormFieldError errors={field.state.meta.errors} />
+                    </div>
+                  )}
+                </create.form.Field>
+
+                <create.form.Field name="email">
+                  {(field) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor={field.name}>Email (optional)</Label>
+                      <Input
+                        id={field.name}
+                        type="email"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        placeholder="jane@example.com"
+                      />
+                      <FormFieldError errors={field.state.meta.errors} />
+                    </div>
+                  )}
+                </create.form.Field>
+
+                <create.form.Field name="phone1">
+                  {(field) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor={field.name}>Phone 1 (optional)</Label>
+                      <Input
+                        id={field.name}
+                        type="tel"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        placeholder="+1 (555) 555-5555"
+                      />
+                      <FormFieldError errors={field.state.meta.errors} />
+                    </div>
+                  )}
+                </create.form.Field>
+
+                <create.form.Field name="phone2">
+                  {(field) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor={field.name}>Phone 2 (optional)</Label>
+                      <Input
+                        id={field.name}
+                        type="tel"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        placeholder="+1 (555) 555-0000"
+                      />
+                      <FormFieldError errors={field.state.meta.errors} />
+                    </div>
+                  )}
+                </create.form.Field>
+
+                {create.error ? (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{create.error}</AlertDescription>
+                  </Alert>
+                ) : null}
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="person-middle-name">Middle name</Label>
-                <Input
-                  id="person-middle-name"
-                  value={create.middleName}
-                  onChange={(event) => create.onMiddleNameChange(event.target.value)}
-                  placeholder="Optional"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="person-last-name">Last name</Label>
-                <Input
-                  id="person-last-name"
-                  value={create.lastName}
-                  onChange={(event) => create.onLastNameChange(event.target.value)}
-                  placeholder="Doe"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="person-email">Email (optional)</Label>
-                <Input
-                  id="person-email"
-                  type="email"
-                  value={create.email}
-                  onChange={(event) => create.onEmailChange(event.target.value)}
-                  placeholder="jane@example.com"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="person-phone1">Phone 1 (optional)</Label>
-                <Input
-                  id="person-phone1"
-                  type="tel"
-                  value={create.phone1}
-                  onChange={(event) => create.onPhone1Change(event.target.value)}
-                  placeholder="+1 (555) 555-5555"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="person-phone2">Phone 2 (optional)</Label>
-                <Input
-                  id="person-phone2"
-                  type="tel"
-                  value={create.phone2}
-                  onChange={(event) => create.onPhone2Change(event.target.value)}
-                  placeholder="+1 (555) 555-0000"
-                />
-              </div>
-
-              <SchemaIssueList issues={create.issues} />
-              {create.error ? (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{create.error}</AlertDescription>
-                </Alert>
-              ) : null}
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={create.onCancel}>
-                Cancel
-              </Button>
-              <Button onClick={create.onSubmit}>Add Person</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={create.onCancel}>
+                  Cancel
+                </Button>
+                <create.form.Subscribe
+                  selector={(state) => ({
+                    canSubmit: state.canSubmit,
+                    isSubmitting: state.isSubmitting
+                  })}
+                >
+                  {({ canSubmit, isSubmitting }) => (
+                    <Button type="submit" disabled={!canSubmit}>
+                      {isSubmitting ? 'Saving...' : 'Add Person'}
+                    </Button>
+                  )}
+                </create.form.Subscribe>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       }

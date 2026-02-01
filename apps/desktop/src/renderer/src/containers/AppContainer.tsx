@@ -1,11 +1,12 @@
 import { useCallback, useState, useSyncExternalStore } from 'react'
-import { Either, Schema } from 'effect'
+import { useForm } from '@tanstack/react-form'
+import { Either } from 'effect'
 import { AuthScreen } from '../components/auth/AuthScreen'
 import { DashboardContainer } from './DashboardContainer'
 import { AuthSignInRequestSchema } from '@satori/ipc-contract/ipc/contract'
-import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
-import { formatParseIssues } from '@satori/ipc-contract/utils/parseIssue'
 import { AuthStore } from '../services/AuthStore'
+import type { AuthFormValues } from '../components/auth/AuthScreen'
+import { createSchemaFormValidator } from '../utils/formValidation'
 
 export const AppContainer = (): React.JSX.Element => {
   const authState = useSyncExternalStore(
@@ -13,37 +14,36 @@ export const AppContainer = (): React.JSX.Element => {
     AuthStore.getSnapshot,
     AuthStore.getSnapshot
   )
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [issues, setIssues] = useState<ReadonlyArray<SchemaIssue>>([])
   const [error, setError] = useState<string | null>(null)
 
-  const signIn = useCallback((): void => {
-    setError(null)
+  const signInDefaults: AuthFormValues = {
+    email: '',
+    password: ''
+  }
 
-    const decoded = Schema.decodeUnknownEither(AuthSignInRequestSchema)({
-      email,
-      password
-    })
+  const signInForm = useForm({
+    defaultValues: signInDefaults,
+    validators: {
+      onSubmit: createSchemaFormValidator(
+        AuthSignInRequestSchema,
+        (values: AuthFormValues) => Either.right(values)
+      )
+    },
+    onSubmit: ({ value, formApi }) => {
+      setError(null)
+      return AuthStore.signIn(value).then(
+        (result) => {
+          if (result._tag === 'Ok') {
+            formApi.setFieldValue('password', '')
+            return
+          }
 
-    if (Either.isLeft(decoded)) {
-      setIssues(formatParseIssues(decoded.left))
-      return
+          setError(result.error.message)
+        },
+        (reason) => setError(String(reason))
+      )
     }
-
-    setIssues([])
-    AuthStore.signIn(decoded.right).then(
-      (result) => {
-        if (result._tag === 'Ok') {
-          setPassword('')
-          return
-        }
-
-        setError(result.error.message)
-      },
-      (reason) => setError(String(reason))
-    )
-  }, [email, password])
+  })
 
   const signOut = useCallback((): void => {
     setError(null)
@@ -69,13 +69,8 @@ export const AppContainer = (): React.JSX.Element => {
       <AuthScreen
         appName="Satori Desktop"
         mode={authState._tag === 'Locked' ? 'locked' : 'unauthenticated'}
-        email={email}
-        password={password}
-        issues={issues}
+        form={signInForm}
         error={error}
-        onEmailChange={setEmail}
-        onPasswordChange={setPassword}
-        onSubmit={signIn}
       />
     )
   }

@@ -33,3 +33,13 @@ export const formatTime = (timestampMs: number): string =>
     hour: '2-digit',
     minute: '2-digit'
   })
+
+export const parseDateTimeLocalMs = (raw: string): number | null => {
+  const trimmed = raw.trim()
+  if (trimmed.length === 0) {
+    return null
+  }
+
+  const ms = Date.parse(trimmed)
+  return Number.isFinite(ms) ? ms : null
+}

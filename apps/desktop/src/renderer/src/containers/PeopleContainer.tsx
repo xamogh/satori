@@ -1,11 +1,16 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
-import { Either, Schema } from 'effect'
-import { PeoplePage } from '../components/pages/PeoplePage'
-import { PersonCreateInputSchema, type Person } from '@satori/domain/domain/person'
-import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
-import { formatParseIssues } from '@satori/ipc-contract/utils/parseIssue'
+import { useForm } from '@tanstack/react-form'
+import { Either } from 'effect'
+import { PeoplePage, type PeopleCreateFormValues } from '../components/pages/PeoplePage'
+import {
+  PersonCreateInputSchema,
+  type Person,
+  type PersonCreateInput
+} from '@satori/domain/domain/person'
 import { createStore } from '../utils/store'
 import { clampPageIndex, slicePage } from '../utils/pagination'
+import { createSchemaFormValidator } from '../utils/formValidation'
+import { trimToNull } from '../utils/string'
 
 const normalizeQuery = (raw: string): string | undefined => {
   const trimmed = raw.trim()
@@ -113,13 +118,6 @@ export const PeopleContainer = (): React.JSX.Element => {
   )
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [createFirstName, setCreateFirstName] = useState('')
-  const [createMiddleName, setCreateMiddleName] = useState('')
-  const [createLastName, setCreateLastName] = useState('')
-  const [createEmail, setCreateEmail] = useState('')
-  const [createPhone1, setCreatePhone1] = useState('')
-  const [createPhone2, setCreatePhone2] = useState('')
-  const [createIssues, setCreateIssues] = useState<ReadonlyArray<SchemaIssue>>([])
   const [createError, setCreateError] = useState<string | null>(null)
 
   const [photoOpen, setPhotoOpen] = useState(false)
@@ -131,35 +129,16 @@ export const PeopleContainer = (): React.JSX.Element => {
     void refreshPeopleList(normalizedQuery)
   }, [normalizedQuery])
 
-  const cancelCreate = useCallback((): void => {
-    setCreateOpen(false)
-    setCreateIssues([])
-    setCreateError(null)
-  }, [])
-
-  const closePhotoDialog = useCallback((): void => {
-    setPhotoOpen(false)
-    setPhotoError(null)
-    setPhotoUrl((current) => {
-      if (typeof current === 'string') {
-        URL.revokeObjectURL(current)
-      }
-      return null
-    })
-  }, [])
-
-  const submitCreate = useCallback((): void => {
-    setCreateError(null)
-
-    const decoded = Schema.decodeUnknownEither(PersonCreateInputSchema)({
-      firstName: createFirstName,
-      middleName: createMiddleName.trim().length === 0 ? null : createMiddleName,
-      lastName: createLastName,
+  const buildPersonCreateInput = useCallback(
+    (values: PeopleCreateFormValues): PersonCreateInput => ({
+      firstName: values.firstName,
+      middleName: trimToNull(values.middleName),
+      lastName: values.lastName,
       gender: null,
       yearOfBirth: null,
-      email: createEmail.trim().length === 0 ? null : createEmail,
-      phone1: createPhone1.trim().length === 0 ? null : createPhone1,
-      phone2: createPhone2.trim().length === 0 ? null : createPhone2,
+      email: trimToNull(values.email),
+      phone1: trimToNull(values.phone1),
+      phone2: trimToNull(values.phone2),
       address: null,
       country: null,
       nationality: null,
@@ -177,41 +156,61 @@ export const PeopleContainer = (): React.JSX.Element => {
       centerId: null,
       isKramaInstructor: false,
       kramaInstructorPersonId: null
-    })
+    }),
+    []
+  )
 
-    if (Either.isLeft(decoded)) {
-      setCreateIssues(formatParseIssues(decoded.left))
-      return
+  const personCreateDefaults: PeopleCreateFormValues = {
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    email: '',
+    phone1: '',
+    phone2: ''
+  }
+
+  const personCreateForm = useForm({
+    defaultValues: personCreateDefaults,
+    validators: {
+      onSubmit: createSchemaFormValidator(
+        PersonCreateInputSchema,
+        (values: PeopleCreateFormValues) => Either.right(buildPersonCreateInput(values))
+      )
+    },
+    onSubmit: ({ value, formApi }) => {
+      setCreateError(null)
+      return window.api.personsCreate(buildPersonCreateInput(value)).then(
+        (result) => {
+          if (result._tag === 'Ok') {
+            setCreateOpen(false)
+            formApi.reset()
+            refresh()
+            return
+          }
+
+          setCreateError(result.error.message)
+        },
+        (reason) => setCreateError(String(reason))
+      )
     }
+  })
 
-    setCreateIssues([])
-    window.api.personsCreate(decoded.right).then(
-      (result) => {
-        if (result._tag === 'Ok') {
-          setCreateOpen(false)
-          setCreateFirstName('')
-          setCreateMiddleName('')
-          setCreateLastName('')
-          setCreateEmail('')
-          setCreatePhone1('')
-          setCreatePhone2('')
-          refresh()
-          return
-        }
+  const cancelCreate = useCallback((): void => {
+    setCreateOpen(false)
+    setCreateError(null)
+    personCreateForm.reset()
+  }, [personCreateForm])
 
-        setCreateError(result.error.message)
-      },
-      (reason) => setCreateError(String(reason))
-    )
-  }, [
-    createFirstName,
-    createMiddleName,
-    createLastName,
-    createEmail,
-    createPhone1,
-    createPhone2,
-    refresh
-  ])
+  const closePhotoDialog = useCallback((): void => {
+    setPhotoOpen(false)
+    setPhotoError(null)
+    setPhotoUrl((current) => {
+      if (typeof current === 'string') {
+        URL.revokeObjectURL(current)
+      }
+      return null
+    })
+  }, [])
 
   const deletePerson = useCallback(
     (id: string): void => {
@@ -327,29 +326,16 @@ export const PeopleContainer = (): React.JSX.Element => {
       onUploadPhoto={uploadPhotoForPerson}
       create={{
         open: createOpen,
-        firstName: createFirstName,
-        middleName: createMiddleName,
-        lastName: createLastName,
-        email: createEmail,
-        phone1: createPhone1,
-        phone2: createPhone2,
-        issues: createIssues,
+        form: personCreateForm,
         error: createError,
         onOpenChange: (open) => {
           setCreateOpen(open)
           if (!open) {
-            setCreateIssues([])
             setCreateError(null)
+            personCreateForm.reset()
           }
         },
-        onFirstNameChange: setCreateFirstName,
-        onMiddleNameChange: setCreateMiddleName,
-        onLastNameChange: setCreateLastName,
-        onEmailChange: setCreateEmail,
-        onPhone1Change: setCreatePhone1,
-        onPhone2Change: setCreatePhone2,
-        onCancel: cancelCreate,
-        onSubmit: submitCreate
+        onCancel: cancelCreate
       }}
       photoDialog={{
         open: photoOpen,

@@ -1,5 +1,5 @@
-import type { Event } from '@satori/domain/domain/event'
-import { CalendarDays, Plus, Search, RefreshCw, AlertCircle } from 'lucide-react'
+import type { Group } from '@satori/domain/domain/group'
+import { Users, Plus, Search, RefreshCw, AlertCircle } from 'lucide-react'
 import { Button } from '../ui/button'
 import { DataTable, type DataTableColumn } from '../data-table/DataTable'
 import { DataTablePagination } from '../data-table/DataTablePagination'
@@ -16,36 +16,33 @@ import {
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Textarea } from '../ui/textarea'
-import { formatDateTime } from '../../utils/date'
 import { Alert, AlertDescription } from '../ui/alert'
 import { PageHeader, PageContainer } from '../layout/PageHeader'
 import { EmptyState } from '../ui/empty-state'
 import { Badge } from '../ui/badge'
 import { FormFieldError } from '../forms/FormFieldError'
+import { formatDateTime } from '../../utils/date'
 import type { FormApiFor } from '../../utils/formTypes'
 
-export type EventsCreateFormValues = {
+export type GroupsCreateFormValues = {
   readonly name: string
   readonly description: string
-  readonly startsAt: string
-  readonly endsAt: string
-  readonly registrationMode: 'PRE_REGISTRATION' | 'WALK_IN'
 }
 
-export type EventsCreateFormState = {
+export type GroupsCreateFormState = {
   readonly open: boolean
-  readonly form: FormApiFor<EventsCreateFormValues>
+  readonly form: FormApiFor<GroupsCreateFormValues>
   readonly error: string | null
   readonly onOpenChange: (open: boolean) => void
   readonly onCancel: () => void
 }
 
-export type EventsPageProps = {
+export type GroupsPageProps = {
   readonly query: string
   readonly loading: boolean
   readonly error: string | null
-  readonly events: ReadonlyArray<Event>
-  readonly eventsTotal: number
+  readonly groups: ReadonlyArray<Group>
+  readonly groupsTotal: number
   readonly pageIndex: number
   readonly pageSize: number
   readonly onPageIndexChange: (pageIndex: number) => void
@@ -53,75 +50,48 @@ export type EventsPageProps = {
   readonly onQueryChange: (value: string) => void
   readonly onRefresh: () => void
   readonly onDelete: (id: string) => void
-  readonly create: EventsCreateFormState
+  readonly create: GroupsCreateFormState
 }
 
-const getEventStatus = (
-  event: Event
-): { label: string; variant: 'default' | 'secondary' | 'outline' } => {
-  switch (event.status) {
-    case 'ACTIVE':
-      return { label: 'Active', variant: 'default' }
-    case 'CLOSED':
-      return { label: 'Closed', variant: 'secondary' }
-    case 'DRAFT':
-      return { label: 'Draft', variant: 'outline' }
-  }
-}
-
-const eventsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableColumn<Event>> => [
+const groupsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableColumn<Group>> => [
   {
-    id: 'event',
-    header: 'Event',
-    cell: (event) => (
+    id: 'group',
+    header: 'Group',
+    cell: (group) => (
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <CalendarDays className="h-4 w-4" />
+          <Users className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="truncate font-medium">{event.name}</p>
-          {event.description ? (
-            <p className="truncate text-sm text-muted-foreground">{event.description}</p>
-          ) : null}
+          <p className="truncate font-medium">{group.name}</p>
+          {group.description ? (
+            <p className="truncate text-sm text-muted-foreground">{group.description}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">No description</p>
+          )}
         </div>
       </div>
     )
   },
   {
-    id: 'startsAt',
-    header: 'Date & Time',
-    cell: (event) => (
-      <div className="text-sm">
-        <p>{formatDateTime(event.startsAtMs)}</p>
-        {event.endsAtMs ? (
-          <p className="text-muted-foreground">to {formatDateTime(event.endsAtMs)}</p>
-        ) : null}
-      </div>
-    )
-  },
-  {
-    id: 'status',
-    header: 'Status',
-    headerClassName: 'w-[100px]',
-    cell: (event) => {
-      const status = getEventStatus(event)
-      return <Badge variant={status.variant}>{status.label}</Badge>
-    }
+    id: 'updated',
+    header: 'Updated',
+    cell: (group) => <span className="text-sm">{formatDateTime(group.updatedAtMs)}</span>
   },
   {
     id: 'actions',
     header: '',
     headerClassName: 'w-[56px]',
     cellClassName: 'text-right',
-    cell: (event) => (
+    cell: (group) => (
       <RowActionsMenu
-        label="Open event actions"
+        label="Open group actions"
         actions={[
           {
             id: 'delete',
             label: 'Delete',
             destructive: true,
-            onSelect: () => onDelete(event.id)
+            onSelect: () => onDelete(group.id)
           }
         ]}
       />
@@ -129,12 +99,12 @@ const eventsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableC
   }
 ]
 
-export const EventsPage = ({
+export const GroupsPage = ({
   query,
   loading,
   error,
-  events,
-  eventsTotal,
+  groups,
+  groupsTotal,
   pageIndex,
   pageSize,
   onPageIndexChange,
@@ -143,25 +113,25 @@ export const EventsPage = ({
   onRefresh,
   onDelete,
   create
-}: EventsPageProps): React.JSX.Element => (
+}: GroupsPageProps): React.JSX.Element => (
   <PageContainer>
     <PageHeader
-      icon={<CalendarDays className="h-5 w-5" />}
-      title="Events"
-      description="Create and manage monastery events and activities."
-      badge={eventsTotal > 0 ? <Badge variant="secondary">{eventsTotal} total</Badge> : null}
+      icon={<Users className="h-5 w-5" />}
+      title="Groups"
+      description="Organize people into groups for tracking and reporting."
+      badge={groupsTotal > 0 ? <Badge variant="secondary">{groupsTotal} total</Badge> : null}
       actions={
         <Dialog open={create.open} onOpenChange={create.onOpenChange}>
           <DialogTrigger asChild>
             <Button size="sm">
               <Plus className="mr-2 h-4 w-4" />
-              Add Event
+              Add Group
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Event</DialogTitle>
-              <DialogDescription>Add a new event to your calendar.</DialogDescription>
+              <DialogTitle>Create Group</DialogTitle>
+              <DialogDescription>Add a new group to organize people.</DialogDescription>
             </DialogHeader>
 
             <form
@@ -181,7 +151,7 @@ export const EventsPage = ({
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(event) => field.handleChange(event.target.value)}
-                        placeholder="Sunday service"
+                        placeholder="Dharma students"
                       />
                       <FormFieldError errors={field.state.meta.errors} />
                     </div>
@@ -197,70 +167,13 @@ export const EventsPage = ({
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(event) => field.handleChange(event.target.value)}
-                        placeholder="Optional notes about the event"
+                        placeholder="Optional notes about the group"
                         rows={3}
                       />
                       <FormFieldError errors={field.state.meta.errors} />
                     </div>
                   )}
                 </create.form.Field>
-
-                <create.form.Field name="registrationMode">
-                  {(field) => (
-                    <div className="grid gap-2">
-                      <Label htmlFor={field.name}>Registration mode</Label>
-                      <select
-                        id={field.name}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(event) =>
-                          field.handleChange(
-                            event.target.value === 'WALK_IN' ? 'WALK_IN' : 'PRE_REGISTRATION'
-                          )
-                        }
-                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      >
-                        <option value="PRE_REGISTRATION">Pre-registration</option>
-                        <option value="WALK_IN">Walk-in</option>
-                      </select>
-                      <FormFieldError errors={field.state.meta.errors} />
-                    </div>
-                  )}
-                </create.form.Field>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <create.form.Field name="startsAt">
-                    {(field) => (
-                      <div className="grid gap-2">
-                        <Label htmlFor={field.name}>Starts at</Label>
-                        <Input
-                          id={field.name}
-                          type="datetime-local"
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(event) => field.handleChange(event.target.value)}
-                        />
-                        <FormFieldError errors={field.state.meta.errors} />
-                      </div>
-                    )}
-                  </create.form.Field>
-
-                  <create.form.Field name="endsAt">
-                    {(field) => (
-                      <div className="grid gap-2">
-                        <Label htmlFor={field.name}>Ends at (optional)</Label>
-                        <Input
-                          id={field.name}
-                          type="datetime-local"
-                          value={field.state.value}
-                          onBlur={field.handleBlur}
-                          onChange={(event) => field.handleChange(event.target.value)}
-                        />
-                        <FormFieldError errors={field.state.meta.errors} />
-                      </div>
-                    )}
-                  </create.form.Field>
-                </div>
 
                 {create.error ? (
                   <Alert variant="destructive">
@@ -282,7 +195,7 @@ export const EventsPage = ({
                 >
                   {({ canSubmit, isSubmitting }) => (
                     <Button type="submit" disabled={!canSubmit}>
-                      {isSubmitting ? 'Saving...' : 'Create Event'}
+                      {isSubmitting ? 'Saving...' : 'Create Group'}
                     </Button>
                   )}
                 </create.form.Subscribe>
@@ -306,7 +219,7 @@ export const EventsPage = ({
         <Input
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search events..."
+          placeholder="Search groups..."
           className="pl-8"
         />
       </div>
@@ -316,18 +229,18 @@ export const EventsPage = ({
       </Button>
     </div>
 
-    {events.length === 0 && !loading ? (
+    {groups.length === 0 && !loading ? (
       <EmptyState
-        icon={<CalendarDays className="h-6 w-6" />}
-        title="No events found"
+        icon={<Users className="h-6 w-6" />}
+        title="No groups found"
         description={
-          query ? 'Try adjusting your search terms.' : 'Get started by creating your first event.'
+          query ? 'Try adjusting your search terms.' : 'Create your first group to get started.'
         }
         action={
           !query ? (
             <Button size="sm" onClick={() => create.onOpenChange(true)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Event
+              Add Group
             </Button>
           ) : undefined
         }
@@ -335,13 +248,13 @@ export const EventsPage = ({
     ) : (
       <>
         <DataTable
-          columns={eventsColumns(onDelete)}
-          rows={events}
+          columns={groupsColumns(onDelete)}
+          rows={groups}
           loading={loading}
-          getRowKey={(event) => event.id}
+          getRowKey={(group) => group.id}
         />
         <DataTablePagination
-          totalItems={eventsTotal}
+          totalItems={groupsTotal}
           pageIndex={pageIndex}
           pageSize={pageSize}
           onPageIndexChange={onPageIndexChange}

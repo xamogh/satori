@@ -37,6 +37,7 @@
     "@satori/api-contract": "workspace:*",
     "@satori/domain": "workspace:*",
     "@satori/ipc-contract": "workspace:*",
+    "@tanstack/react-form": "^1.28.0",
     "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

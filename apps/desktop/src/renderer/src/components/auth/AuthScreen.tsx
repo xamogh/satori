@@ -1,34 +1,29 @@
-import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
 import { KeyRound } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
-import { SchemaIssueList } from '../SchemaIssueList'
 import { Alert, AlertDescription } from '../ui/alert'
+import { FormFieldError } from '../forms/FormFieldError'
+import type { FormApiFor } from '../../utils/formTypes'
+
+export type AuthFormValues = {
+  readonly email: string
+  readonly password: string
+}
 
 export type AuthScreenProps = {
   readonly appName: string
   readonly mode: 'unauthenticated' | 'locked'
-  readonly email: string
-  readonly password: string
-  readonly issues: ReadonlyArray<SchemaIssue>
+  readonly form: FormApiFor<AuthFormValues>
   readonly error: string | null
-  readonly onEmailChange: (email: string) => void
-  readonly onPasswordChange: (password: string) => void
-  readonly onSubmit: () => void
 }
 
 export const AuthScreen = ({
   appName,
   mode,
-  email,
-  password,
-  issues,
+  form,
   error,
-  onEmailChange,
-  onPasswordChange,
-  onSubmit
 }: AuthScreenProps): React.JSX.Element => (
   <div className="relative flex min-h-screen items-center justify-center p-6">
     {/* Gradient background */}
@@ -49,40 +44,69 @@ export const AuthScreen = ({
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
-            placeholder="you@example.com"
-            type="email"
-            autoComplete="email"
-          />
-        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            void form.handleSubmit()
+          }}
+          className="grid gap-4"
+        >
+          <form.Field name="email">
+            {(field) => (
+              <div className="grid gap-2">
+                <Label htmlFor={field.name}>Email</Label>
+                <Input
+                  id={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  placeholder="you@example.com"
+                  type="email"
+                  autoComplete="email"
+                />
+                <FormFieldError errors={field.state.meta.errors} />
+              </div>
+            )}
+          </form.Field>
 
-        <div className="grid gap-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            value={password}
-            onChange={(event) => onPasswordChange(event.target.value)}
-            placeholder="Enter your password"
-            type="password"
-            autoComplete="current-password"
-          />
-        </div>
+          <form.Field name="password">
+            {(field) => (
+              <div className="grid gap-2">
+                <Label htmlFor={field.name}>Password</Label>
+                <Input
+                  id={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  placeholder="Enter your password"
+                  type="password"
+                  autoComplete="current-password"
+                />
+                <FormFieldError errors={field.state.meta.errors} />
+              </div>
+            )}
+          </form.Field>
 
-        <SchemaIssueList issues={issues} />
-        {error ? (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
 
-        <Button onClick={onSubmit} className="w-full">
-          Sign in
-        </Button>
+          <form.Subscribe
+            selector={(state) => ({
+              canSubmit: state.canSubmit,
+              isSubmitting: state.isSubmitting
+            })}
+          >
+            {({ canSubmit, isSubmitting }) => (
+              <Button type="submit" disabled={!canSubmit} className="w-full">
+                {isSubmitting ? 'Signing in...' : 'Sign in'}
+              </Button>
+            )}
+          </form.Subscribe>
+        </form>
       </CardContent>
     </Card>
   </div>
