@@ -165,6 +165,46 @@ const makeIpcService = Effect.gen(function* () {
           Effect.zipRight(dataService.eventsDelete(input))
         )
       ),
+      registerHandler(IpcRoutes.eventDaysList, (query) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.eventDaysList(query))
+        )
+      ),
+      registerHandler(IpcRoutes.eventDaysCreate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.eventDaysCreate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.eventDaysUpdate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.eventDaysUpdate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.eventDaysDelete, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.eventDaysDelete(input))
+        )
+      ),
+      registerHandler(IpcRoutes.eventAttendeesList, (query) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.eventAttendeesList(query))
+        )
+      ),
+      registerHandler(IpcRoutes.eventAttendeesCreate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.eventAttendeesCreate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.eventAttendeesUpdate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.eventAttendeesUpdate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.eventAttendeesDelete, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.eventAttendeesDelete(input))
+        )
+      ),
 
       registerHandler(IpcRoutes.personsList, (query) =>
         authService.requireAuthenticated.pipe(
@@ -187,27 +227,6 @@ const makeIpcService = Effect.gen(function* () {
         )
       ),
 
-      registerHandler(IpcRoutes.registrationsList, (query) =>
-        authService.requireAuthenticated.pipe(
-          Effect.zipRight(dataService.registrationsList(query))
-        )
-      ),
-      registerHandler(IpcRoutes.registrationsCreate, (input) =>
-        authService.requireAuthenticated.pipe(
-          Effect.zipRight(dataService.registrationsCreate(input))
-        )
-      ),
-      registerHandler(IpcRoutes.registrationsUpdate, (input) =>
-        authService.requireAuthenticated.pipe(
-          Effect.zipRight(dataService.registrationsUpdate(input))
-        )
-      ),
-      registerHandler(IpcRoutes.registrationsDelete, (input) =>
-        authService.requireAuthenticated.pipe(
-          Effect.zipRight(dataService.registrationsDelete(input))
-        )
-      ),
-
       registerHandler(IpcRoutes.attendanceList, (query) =>
         authService.requireAuthenticated.pipe(
           Effect.zipRight(dataService.attendanceList(query))
@@ -226,6 +245,126 @@ const makeIpcService = Effect.gen(function* () {
       registerHandler(IpcRoutes.attendanceDelete, (input) =>
         authService.requireAuthenticated.pipe(
           Effect.zipRight(dataService.attendanceDelete(input))
+        )
+      ),
+      registerHandler(IpcRoutes.groupsList, (query) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.groupsList(query))
+        )
+      ),
+      registerHandler(IpcRoutes.groupsCreate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.groupsCreate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.groupsUpdate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.groupsUpdate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.groupsDelete, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.groupsDelete(input))
+        )
+      ),
+      registerHandler(IpcRoutes.personGroupsList, (query) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.personGroupsList(query))
+        )
+      ),
+      registerHandler(IpcRoutes.personGroupsCreate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.personGroupsCreate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.personGroupsUpdate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.personGroupsUpdate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.personGroupsDelete, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.personGroupsDelete(input))
+        )
+      ),
+      registerHandler(IpcRoutes.empowermentsList, (query) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.empowermentsList(query))
+        )
+      ),
+      registerHandler(IpcRoutes.empowermentsCreate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.empowermentsCreate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.empowermentsUpdate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.empowermentsUpdate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.empowermentsDelete, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.empowermentsDelete(input))
+        )
+      ),
+      registerHandler(IpcRoutes.gurusList, (query) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.gurusList(query))
+        )
+      ),
+      registerHandler(IpcRoutes.gurusCreate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.gurusCreate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.gurusUpdate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.gurusUpdate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.gurusDelete, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.gurusDelete(input))
+        )
+      ),
+      registerHandler(IpcRoutes.mahakramaStepsList, (query) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.mahakramaStepsList(query))
+        )
+      ),
+      registerHandler(IpcRoutes.mahakramaStepsCreate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.mahakramaStepsCreate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.mahakramaStepsUpdate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.mahakramaStepsUpdate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.mahakramaStepsDelete, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.mahakramaStepsDelete(input))
+        )
+      ),
+      registerHandler(IpcRoutes.mahakramaHistoryList, (query) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.mahakramaHistoryList(query))
+        )
+      ),
+      registerHandler(IpcRoutes.mahakramaHistoryCreate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.mahakramaHistoryCreate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.mahakramaHistoryUpdate, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.mahakramaHistoryUpdate(input))
+        )
+      ),
+      registerHandler(IpcRoutes.mahakramaHistoryDelete, (input) =>
+        authService.requireAuthenticated.pipe(
+          Effect.zipRight(dataService.mahakramaHistoryDelete(input))
         )
       ),
 

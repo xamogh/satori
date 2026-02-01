@@ -2,7 +2,11 @@ import Database from "better-sqlite3"
 import { mkdirSync } from "node:fs"
 import { dirname } from "node:path"
 import { parentPort, workerData } from "node:worker_threads"
-import { LOCAL_DB_PRAGMAS, LOCAL_DB_SCHEMA_SQL } from "../constants/localDb"
+import {
+  LOCAL_DB_PRAGMAS,
+  LOCAL_DB_SCHEMA_SQL,
+  LOCAL_DB_SCHEMA_VERSION,
+} from "../constants/localDb"
 import type {
   LocalDbWorkerRequest,
   LocalDbWorkerResponse,
@@ -68,6 +72,35 @@ const isInitErrorPayload = (value: unknown): value is { readonly _tag: "InitErro
   typeof (value as { readonly error?: unknown }).error === "object" &&
   (value as { readonly error?: unknown }).error !== null
 
+const readUserVersion = (db: Database.Database): number => {
+  const version = db.pragma("user_version", { simple: true })
+  return typeof version === "number" ? version : 0
+}
+
+const setUserVersion = (db: Database.Database, version: number): void => {
+  db.pragma(`user_version = ${version}`)
+}
+
+const resetSchema = (db: Database.Database): void => {
+  const tables = (db
+    .prepare("select name from sqlite_master where type = 'table'")
+    .all() as ReadonlyArray<{ readonly name?: unknown }>)
+    .map((row) => (typeof row.name === "string" ? row.name : null))
+    .filter(
+      (name): name is string =>
+        typeof name === "string" &&
+        name !== "sqlite_sequence" &&
+        !name.startsWith("sqlite_")
+    )
+
+  for (const name of tables) {
+    db.exec(`drop table if exists "${name}"`)
+  }
+
+  db.exec(LOCAL_DB_SCHEMA_SQL)
+  setUserVersion(db, LOCAL_DB_SCHEMA_VERSION)
+}
+
 const init = (): Database.Database => {
   const fail = (message: string, error: unknown): never => {
     throw { _tag: "InitError", message, error: serializeError(error) } as const
@@ -106,7 +139,15 @@ const init = (): Database.Database => {
   }
 
   try {
-    db.exec(LOCAL_DB_SCHEMA_SQL)
+    const currentVersion = readUserVersion(db)
+    if (currentVersion !== LOCAL_DB_SCHEMA_VERSION) {
+      console.warn(
+        `Local DB schema version mismatch (have ${currentVersion}, expected ${LOCAL_DB_SCHEMA_VERSION}). Resetting local database.`
+      )
+      resetSchema(db)
+    } else {
+      db.exec(LOCAL_DB_SCHEMA_SQL)
+    }
   } catch (error) {
     fail("Failed to migrate local database schema", error)
   }

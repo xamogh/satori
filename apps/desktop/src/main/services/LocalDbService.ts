@@ -52,6 +52,19 @@ const isSqliteRunResult = (value: unknown): value is SqliteRunResult =>
   (typeof (value as { readonly lastInsertRowid?: unknown }).lastInsertRowid === "number" ||
     typeof (value as { readonly lastInsertRowid?: unknown }).lastInsertRowid === "bigint")
 
+const logQueryError = (
+  message: string,
+  query: string,
+  params: SqliteParams | null,
+  cause: unknown
+): void => {
+  console.error("[LocalDb]", message, {
+    query,
+    params,
+    cause,
+  })
+}
+
 const makeClient: Effect.Effect<LocalDbClient, LocalDbOpenError | LocalDbMigrationError> =
   Effect.gen(function* () {
     const lock = yield* Effect.makeSemaphore(1)
@@ -190,15 +203,18 @@ const makeClient: Effect.Effect<LocalDbClient, LocalDbOpenError | LocalDbMigrati
     const execUnsafe = (sql: string): Effect.Effect<void, LocalDbQueryError> =>
       Effect.tryPromise({
         try: () => send({ _tag: "Exec", id: nextRequestId(), sql }),
-        catch: (error) =>
-          new LocalDbQueryError({
+        catch: (error) => {
+          logQueryError("Local DB exec failed", sql, null, error)
+          return new LocalDbQueryError({
             message: "Local DB exec failed",
             query: sql,
             cause: error,
-          }),
+          })
+        },
       }).pipe(
         Effect.flatMap((response) => {
           if (response._tag === "Ok") return Effect.void
+          logQueryError("Local DB exec failed", sql, null, response.error)
           return Effect.fail(
             new LocalDbQueryError({
               message: "Local DB exec failed",
@@ -215,15 +231,18 @@ const makeClient: Effect.Effect<LocalDbClient, LocalDbOpenError | LocalDbMigrati
     ): Effect.Effect<SqliteRunResult, LocalDbQueryError> =>
       Effect.tryPromise({
         try: () => send({ _tag: "Run", id: nextRequestId(), sql, params }),
-        catch: (error) =>
-          new LocalDbQueryError({
+        catch: (error) => {
+          logQueryError("Local DB query failed", sql, params, error)
+          return new LocalDbQueryError({
             message: "Local DB query failed",
             query: sql,
             cause: error,
-          }),
+          })
+        },
       }).pipe(
         Effect.flatMap((response) => {
           if (response._tag === "Err") {
+            logQueryError("Local DB query failed", sql, params, response.error)
             return Effect.fail(
               new LocalDbQueryError({
                 message: "Local DB query failed",
@@ -234,6 +253,7 @@ const makeClient: Effect.Effect<LocalDbClient, LocalDbOpenError | LocalDbMigrati
           }
 
           if (!isSqliteRunResult(response.value)) {
+            logQueryError("Local DB returned invalid shape", sql, params, response.value)
             return Effect.fail(
               new LocalDbQueryError({
                 message: "Local DB returned invalid shape",
@@ -254,15 +274,18 @@ const makeClient: Effect.Effect<LocalDbClient, LocalDbOpenError | LocalDbMigrati
     ): Effect.Effect<Option.Option<A>, LocalDbQueryError> =>
       Effect.tryPromise({
         try: () => send({ _tag: "Get", id: nextRequestId(), sql, params }),
-        catch: (error) =>
-          new LocalDbQueryError({
+        catch: (error) => {
+          logQueryError("Local DB query failed", sql, params, error)
+          return new LocalDbQueryError({
             message: "Local DB query failed",
             query: sql,
             cause: error,
-          }),
+          })
+        },
       }).pipe(
         Effect.flatMap((response) => {
           if (response._tag === "Err") {
+            logQueryError("Local DB query failed", sql, params, response.error)
             return Effect.fail(
               new LocalDbQueryError({
                 message: "Local DB query failed",
@@ -278,13 +301,14 @@ const makeClient: Effect.Effect<LocalDbClient, LocalDbOpenError | LocalDbMigrati
 
           return Schema.decodeUnknown(schema)(response.value).pipe(
             Effect.map(Option.some),
-            Effect.mapError((error) =>
-              new LocalDbQueryError({
+            Effect.mapError((error) => {
+              logQueryError("Local DB returned invalid shape", sql, params, error)
+              return new LocalDbQueryError({
                 message: "Local DB returned invalid shape",
                 query: sql,
                 cause: error,
               })
-            )
+            })
           )
         })
       )
@@ -296,15 +320,18 @@ const makeClient: Effect.Effect<LocalDbClient, LocalDbOpenError | LocalDbMigrati
     ): Effect.Effect<ReadonlyArray<A>, LocalDbQueryError> =>
       Effect.tryPromise({
         try: () => send({ _tag: "All", id: nextRequestId(), sql, params }),
-        catch: (error) =>
-          new LocalDbQueryError({
+        catch: (error) => {
+          logQueryError("Local DB query failed", sql, params, error)
+          return new LocalDbQueryError({
             message: "Local DB query failed",
             query: sql,
             cause: error,
-          }),
+          })
+        },
       }).pipe(
         Effect.flatMap((response) => {
           if (response._tag === "Err") {
+            logQueryError("Local DB query failed", sql, params, response.error)
             return Effect.fail(
               new LocalDbQueryError({
                 message: "Local DB query failed",
@@ -315,13 +342,14 @@ const makeClient: Effect.Effect<LocalDbClient, LocalDbOpenError | LocalDbMigrati
           }
 
           return Schema.decodeUnknown(Schema.Array(schema))(response.value).pipe(
-            Effect.mapError((error) =>
-              new LocalDbQueryError({
+            Effect.mapError((error) => {
+              logQueryError("Local DB returned invalid shape", sql, params, error)
+              return new LocalDbQueryError({
                 message: "Local DB returned invalid shape",
                 query: sql,
                 cause: error,
               })
-            )
+            })
           )
         }),
       )
