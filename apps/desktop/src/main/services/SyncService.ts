@@ -1,7 +1,7 @@
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform"
 import { Cause, Effect, Either, Option, Schema } from "effect"
 import { AuthService } from "./AuthService"
-import { LocalDbService } from "./LocalDbService"
+import { LocalDbService, type LocalDbClient } from "./LocalDbService"
 import { getApiConfig } from "../utils/apiConfig"
 import { SYNC_BATCH_SIZE, SYNC_INTERVAL_MS } from "../constants/sync"
 import { BadRequest, InternalServerError, Unauthorized } from "@satori/api-contract/api/http-errors"
@@ -55,6 +55,8 @@ const makeSyncService = Effect.gen(function* () {
   const db = yield* LocalDbService
   const client = yield* HttpClient.HttpClient
 
+  type DbClient = Omit<LocalDbClient, "transaction">
+
   let status: SyncStatus = emptyStatus
   let running = false
 
@@ -68,10 +70,13 @@ const makeSyncService = Effect.gen(function* () {
     .get("select cursor_ms as cursorMs from sync_state where id = 1", CursorRowSchema, [])
     .pipe(Effect.map((row) => (Option.isNone(row) ? null : row.value.cursorMs)))
 
-  const setCursor = (cursorMs: number): Effect.Effect<void, LocalDbQueryError> =>
-    db.run("update sync_state set cursor_ms = ? where id = 1", [cursorMs]).pipe(
-      Effect.asVoid
-    )
+  const setCursor = (
+    client: DbClient,
+    cursorMs: number
+  ): Effect.Effect<void, LocalDbQueryError> =>
+    client
+      .run("update sync_state set cursor_ms = ? where id = 1", [cursorMs])
+      .pipe(Effect.asVoid)
 
   const readOutboxBatch = db.all(
     "select op_id as opId, body_json as bodyJson from outbox order by created_at_ms asc limit ?",
@@ -79,15 +84,18 @@ const makeSyncService = Effect.gen(function* () {
     [SYNC_BATCH_SIZE]
   )
 
-  const deleteOutboxOps = (opIds: ReadonlyArray<string>): Effect.Effect<void, LocalDbQueryError> =>
+  const deleteOutboxOps = (
+    client: DbClient,
+    opIds: ReadonlyArray<string>
+  ): Effect.Effect<void, LocalDbQueryError> =>
     opIds.length === 0
       ? Effect.void
-      : db
+      : client
           .run(`delete from outbox where op_id in (${opPlaceholderParams(opIds.length)})`, opIds)
           .pipe(Effect.asVoid)
 
-  const upsertEvent = (event: Event): Effect.Effect<void, LocalDbQueryError> =>
-    db.run(
+  const upsertEvent = (client: DbClient, event: Event): Effect.Effect<void, LocalDbQueryError> =>
+    client.run(
       `
 insert into events (
   id, title, description, starts_at_ms, ends_at_ms, updated_at_ms, deleted_at_ms, server_modified_at_ms
@@ -114,8 +122,11 @@ where excluded.updated_at_ms >= events.updated_at_ms
       ]
     ).pipe(Effect.asVoid)
 
-  const upsertPerson = (person: Person): Effect.Effect<void, LocalDbQueryError> =>
-    db.run(
+  const upsertPerson = (
+    client: DbClient,
+    person: Person
+  ): Effect.Effect<void, LocalDbQueryError> =>
+    client.run(
       `
 insert into persons (
   id, display_name, email, phone, photo_id, updated_at_ms, deleted_at_ms, server_modified_at_ms
@@ -143,9 +154,10 @@ where excluded.updated_at_ms >= persons.updated_at_ms
     ).pipe(Effect.asVoid)
 
   const upsertRegistration = (
+    client: DbClient,
     registration: Registration
   ): Effect.Effect<void, LocalDbQueryError> =>
-    db.run(
+    client.run(
       `
 insert into registrations (
   id, event_id, person_id, status, updated_at_ms, deleted_at_ms, server_modified_at_ms
@@ -171,9 +183,10 @@ where excluded.updated_at_ms >= registrations.updated_at_ms
     ).pipe(Effect.asVoid)
 
   const upsertAttendance = (
+    client: DbClient,
     attendance: Attendance
   ): Effect.Effect<void, LocalDbQueryError> =>
-    db.run(
+    client.run(
       `
 insert into attendance (
   id, event_id, person_id, date, status, updated_at_ms, deleted_at_ms, server_modified_at_ms
@@ -200,8 +213,8 @@ where excluded.updated_at_ms >= attendance.updated_at_ms
       ]
     ).pipe(Effect.asVoid)
 
-  const upsertPhoto = (photo: Photo): Effect.Effect<void, LocalDbQueryError> =>
-    db.run(
+  const upsertPhoto = (client: DbClient, photo: Photo): Effect.Effect<void, LocalDbQueryError> =>
+    client.run(
       `
 insert into photos (
   id, person_id, mime_type, bytes, updated_at_ms, deleted_at_ms, server_modified_at_ms
@@ -227,26 +240,36 @@ where excluded.updated_at_ms >= photos.updated_at_ms
     ).pipe(Effect.asVoid)
 
   const applyChanges = (response: SyncResponse): Effect.Effect<void, LocalDbQueryError> =>
-    db.transaction(
-      Effect.forEach(response.changes.events, upsertEvent, { concurrency: 1 }).pipe(
+    db.transaction((tx) =>
+      Effect.forEach(response.changes.events, (event) => upsertEvent(tx, event), {
+        concurrency: 1,
+      }).pipe(
         Effect.zipRight(
-          Effect.forEach(response.changes.persons, upsertPerson, { concurrency: 1 })
-        ),
-        Effect.zipRight(
-          Effect.forEach(response.changes.registrations, upsertRegistration, {
+          Effect.forEach(response.changes.persons, (person) => upsertPerson(tx, person), {
             concurrency: 1,
           })
         ),
         Effect.zipRight(
-          Effect.forEach(response.changes.attendance, upsertAttendance, {
+          Effect.forEach(
+            response.changes.registrations,
+            (registration) => upsertRegistration(tx, registration),
+            { concurrency: 1 }
+          )
+        ),
+        Effect.zipRight(
+          Effect.forEach(
+            response.changes.attendance,
+            (attendance) => upsertAttendance(tx, attendance),
+            { concurrency: 1 }
+          )
+        ),
+        Effect.zipRight(
+          Effect.forEach(response.changes.photos, (photo) => upsertPhoto(tx, photo), {
             concurrency: 1,
           })
         ),
-        Effect.zipRight(
-          Effect.forEach(response.changes.photos, upsertPhoto, { concurrency: 1 })
-        ),
-        Effect.zipRight(setCursor(response.cursorMs)),
-        Effect.zipRight(deleteOutboxOps(response.ackOpIds)),
+        Effect.zipRight(setCursor(tx, response.cursorMs)),
+        Effect.zipRight(deleteOutboxOps(tx, response.ackOpIds)),
         Effect.asVoid
       )
     )

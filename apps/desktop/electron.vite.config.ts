@@ -8,6 +8,14 @@ const ipcContractSrc = resolve('../../packages/ipc-contract/src')
 
 export default defineConfig({
   main: {
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve('src/main/index.ts'),
+          'workers/localDbWorker': resolve('src/main/workers/localDbWorker.ts')
+        }
+      }
+    },
     resolve: {
       alias: {
         '@satori/domain': domainSrc,

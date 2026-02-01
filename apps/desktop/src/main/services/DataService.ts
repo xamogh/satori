@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto"
 import { Effect, Option, Schema } from "effect"
-import { LocalDbService } from "./LocalDbService"
+import { LocalDbService, type LocalDbClient } from "./LocalDbService"
 import { EntityNotFoundError, OutboxEncodeError } from "../errors"
 import type { LocalDbQueryError } from "../errors"
 import {
@@ -65,11 +65,14 @@ const encodeSyncOperationJson = (
 const makeDataService = Effect.gen(function* () {
   const db = yield* LocalDbService
 
+  type DbClient = Omit<LocalDbClient, "transaction">
+
   const insertOutbox = (
+    client: DbClient,
     opId: string,
     json: string
   ): Effect.Effect<void, LocalDbQueryError> =>
-    db.run(
+    client.run(
       "insert into outbox (op_id, body_json, created_at_ms) values (?, ?, ?)",
       [opId, json, nowMs()]
     ).pipe(Effect.asVoid)
@@ -129,8 +132,8 @@ order by starts_at_ms desc
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             `
 insert into events (
@@ -157,7 +160,7 @@ on conflict(id) do update set
           )
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -188,8 +191,8 @@ on conflict(id) do update set
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             `
 insert into events (
@@ -216,7 +219,7 @@ on conflict(id) do update set
           )
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -238,15 +241,15 @@ on conflict(id) do update set
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             "update events set deleted_at_ms = ?, updated_at_ms = ? where id = ?",
             [deletedAtMs, deletedAtMs, id]
           )
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -306,8 +309,8 @@ order by display_name asc
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             `
 insert into persons (
@@ -334,7 +337,7 @@ on conflict(id) do update set
           )
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -380,8 +383,8 @@ on conflict(id) do update set
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             `
 update persons
@@ -401,7 +404,7 @@ where id = ?
           )
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -423,8 +426,8 @@ where id = ?
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run("update persons set deleted_at_ms = ?, updated_at_ms = ? where id = ?", [
             deletedAtMs,
             deletedAtMs,
@@ -432,7 +435,7 @@ where id = ?
           ])
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -497,8 +500,8 @@ order by updated_at_ms desc
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             `
 insert into registrations (
@@ -523,7 +526,7 @@ on conflict(id) do update set
           )
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -553,8 +556,8 @@ on conflict(id) do update set
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             `
 insert into registrations (
@@ -579,7 +582,7 @@ on conflict(id) do update set
           )
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -600,8 +603,8 @@ on conflict(id) do update set
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run("update registrations set deleted_at_ms = ?, updated_at_ms = ? where id = ?", [
             deletedAtMs,
             deletedAtMs,
@@ -609,7 +612,7 @@ on conflict(id) do update set
           ])
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -676,8 +679,8 @@ order by date desc
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             `
 insert into attendance (
@@ -704,7 +707,7 @@ on conflict(id) do update set
           )
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -735,8 +738,8 @@ on conflict(id) do update set
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             `
 insert into attendance (
@@ -763,7 +766,7 @@ on conflict(id) do update set
           )
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -785,8 +788,8 @@ on conflict(id) do update set
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run("update attendance set deleted_at_ms = ?, updated_at_ms = ? where id = ?", [
             deletedAtMs,
             deletedAtMs,
@@ -794,7 +797,7 @@ on conflict(id) do update set
           ])
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
@@ -868,8 +871,8 @@ where id = ?
 
       const personOpJson = yield* encodeSyncOperationJson(personSyncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run(
             `
 insert into photos (
@@ -895,14 +898,14 @@ on conflict(id) do update set
           .pipe(
             Effect.asVoid,
             Effect.zipRight(
-              db.run("update persons set photo_id = ?, updated_at_ms = ? where id = ?", [
+              tx.run("update persons set photo_id = ?, updated_at_ms = ? where id = ?", [
                 photo.id,
                 person.updatedAtMs,
                 person.id,
               ]).pipe(Effect.asVoid)
             ),
-            Effect.zipRight(insertOutbox(photoSyncOp.opId, photoOpJson)),
-            Effect.zipRight(insertOutbox(personSyncOp.opId, personOpJson))
+            Effect.zipRight(insertOutbox(tx, photoSyncOp.opId, photoOpJson)),
+            Effect.zipRight(insertOutbox(tx, personSyncOp.opId, personOpJson))
           )
       )
 
@@ -924,8 +927,8 @@ on conflict(id) do update set
 
       const opJson = yield* encodeSyncOperationJson(syncOp)
 
-      yield* db.transaction(
-        db
+      yield* db.transaction((tx) =>
+        tx
           .run("update photos set deleted_at_ms = ?, updated_at_ms = ? where id = ?", [
             deletedAtMs,
             deletedAtMs,
@@ -933,7 +936,7 @@ on conflict(id) do update set
           ])
           .pipe(
             Effect.asVoid,
-            Effect.zipRight(insertOutbox(syncOp.opId, opJson))
+            Effect.zipRight(insertOutbox(tx, syncOp.opId, opJson))
           )
       )
 
