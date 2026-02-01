@@ -7,6 +7,7 @@ import { OverviewContainer } from "./OverviewContainer"
 import { EventsContainer } from "./EventsContainer"
 import { PeopleContainer } from "./PeopleContainer"
 import { SyncContainer } from "./SyncContainer"
+import { Alert, AlertDescription } from "../components/ui/alert"
 
 export type DashboardContainerProps = {
   readonly auth: AuthenticatedState
@@ -61,9 +62,9 @@ export const DashboardContainer = ({
       onSignOut={onSignOut}
     >
       {appError ? (
-        <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          {appError}
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{appError}</AlertDescription>
+        </Alert>
       ) : null}
 
       {route === DashboardRoute.overview ? <OverviewContainer /> : null}

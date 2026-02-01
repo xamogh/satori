@@ -5,6 +5,7 @@ import { EventCreateInputSchema, type Event } from "@satori/domain/domain/event"
 import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
 import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
 import { createStore } from "../utils/store"
+import { clampPageIndex, slicePage } from "../utils/pagination"
 
 const normalizeQuery = (raw: string): string | undefined => {
   const trimmed = raw.trim()
@@ -100,6 +101,19 @@ export const EventsContainer = (): React.JSX.Element => {
   const [query, setQuery] = useState("")
   const normalizedQuery = useMemo(() => normalizeQuery(query), [query])
 
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+
+  const safePageIndex = useMemo(
+    () => clampPageIndex(pageIndex, events.length, pageSize),
+    [events.length, pageIndex, pageSize]
+  )
+
+  const pagedEvents = useMemo(
+    () => slicePage(events, safePageIndex, pageSize),
+    [events, pageSize, safePageIndex]
+  )
+
   const [createOpen, setCreateOpen] = useState(false)
   const [createTitle, setCreateTitle] = useState("")
   const [createDescription, setCreateDescription] = useState("")
@@ -109,6 +123,7 @@ export const EventsContainer = (): React.JSX.Element => {
   const [createError, setCreateError] = useState<string | null>(null)
 
   const refresh = useCallback((): void => {
+    setPageIndex(0)
     void refreshEventsList(normalizedQuery)
   }, [normalizedQuery])
 
@@ -194,8 +209,19 @@ export const EventsContainer = (): React.JSX.Element => {
       query={query}
       loading={loading}
       error={error}
-      events={events}
-      onQueryChange={setQuery}
+      events={pagedEvents}
+      eventsTotal={events.length}
+      pageIndex={safePageIndex}
+      pageSize={pageSize}
+      onPageIndexChange={setPageIndex}
+      onPageSizeChange={(nextPageSize) => {
+        setPageIndex(0)
+        setPageSize(nextPageSize)
+      }}
+      onQueryChange={(value) => {
+        setPageIndex(0)
+        setQuery(value)
+      }}
       onRefresh={refresh}
       onDelete={deleteEvent}
       create={{

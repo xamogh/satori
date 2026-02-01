@@ -412,7 +412,13 @@ where excluded.updated_at_ms >= photos.updated_at_ms
       return yield* refreshStatus(null)
     }
 
-    const message = Cause.pretty(exit.cause)
+    const message = Option.match(Cause.failureOption(exit.cause), {
+      onNone: () => Cause.pretty(exit.cause),
+      onSome: (error) =>
+        error._tag === "ApiAuthError"
+          ? `${error.message} (HTTP ${error.statusCode})`
+          : error.message,
+    })
     running = false
     return yield* refreshStatus(message)
   })

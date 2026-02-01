@@ -5,6 +5,7 @@ import { PersonCreateInputSchema, type Person } from "@satori/domain/domain/pers
 import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
 import { formatParseIssues } from "@satori/ipc-contract/utils/parseIssue"
 import { createStore } from "../utils/store"
+import { clampPageIndex, slicePage } from "../utils/pagination"
 
 const normalizeQuery = (raw: string): string | undefined => {
   const trimmed = raw.trim()
@@ -98,6 +99,19 @@ export const PeopleContainer = (): React.JSX.Element => {
   const [query, setQuery] = useState("")
   const normalizedQuery = useMemo(() => normalizeQuery(query), [query])
 
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+
+  const safePageIndex = useMemo(
+    () => clampPageIndex(pageIndex, people.length, pageSize),
+    [pageIndex, pageSize, people.length]
+  )
+
+  const pagedPeople = useMemo(
+    () => slicePage(people, safePageIndex, pageSize),
+    [pageSize, people, safePageIndex]
+  )
+
   const [createOpen, setCreateOpen] = useState(false)
   const [createDisplayName, setCreateDisplayName] = useState("")
   const [createEmail, setCreateEmail] = useState("")
@@ -110,6 +124,7 @@ export const PeopleContainer = (): React.JSX.Element => {
   const [photoError, setPhotoError] = useState<string | null>(null)
 
   const refresh = useCallback((): void => {
+    setPageIndex(0)
     void refreshPeopleList(normalizedQuery)
   }, [normalizedQuery])
 
@@ -257,8 +272,19 @@ export const PeopleContainer = (): React.JSX.Element => {
       query={query}
       loading={loading}
       error={error}
-      people={people}
-      onQueryChange={setQuery}
+      people={pagedPeople}
+      peopleTotal={people.length}
+      pageIndex={safePageIndex}
+      pageSize={pageSize}
+      onPageIndexChange={setPageIndex}
+      onPageSizeChange={(nextPageSize) => {
+        setPageIndex(0)
+        setPageSize(nextPageSize)
+      }}
+      onQueryChange={(value) => {
+        setPageIndex(0)
+        setQuery(value)
+      }}
       onRefresh={refresh}
       onDeletePerson={deletePerson}
       onViewPhoto={viewPhoto}

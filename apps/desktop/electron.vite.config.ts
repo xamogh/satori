@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 const domainSrc = resolve('../../packages/domain/src')
 const apiContractSrc = resolve('../../packages/api-contract/src')
 const ipcContractSrc = resolve('../../packages/ipc-contract/src')
+const workspaceNodeModules = resolve('../../node_modules')
 
 export default defineConfig({
   main: {
@@ -27,7 +28,13 @@ export default defineConfig({
   preload: {
     build: {
       externalizeDeps: false,
-      isolatedEntries: true
+      isolatedEntries: true,
+      rollupOptions: {
+        output: {
+          banner: '(() => {',
+          footer: '})();'
+        }
+      }
     },
     resolve: {
       alias: {
@@ -48,7 +55,7 @@ export default defineConfig({
     },
     server: {
       fs: {
-        allow: [resolve('.'), resolve('../../packages')]
+        allow: [resolve('.'), resolve('../../packages'), workspaceNodeModules]
       }
     },
     plugins: [react()]

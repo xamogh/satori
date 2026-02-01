@@ -8,6 +8,11 @@ const config = {
   content: ["./src/renderer/index.html", "./src/renderer/src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)"],
+        serif: ["var(--font-serif)"],
+        mono: ["var(--font-mono)"],
+      },
       colors: {
         border: oklchVar("--border"),
         input: oklchVar("--input"),
@@ -62,6 +67,12 @@ const config = {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+      },
+      fontSize: {
+        "2xs": ["0.625rem", { lineHeight: "0.75rem" }],
+      },
+      letterSpacing: {
+        tighter: "-0.02em",
       },
     },
   },

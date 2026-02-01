@@ -1,7 +1,10 @@
 import type { Event } from "@satori/domain/domain/event"
 import type { SchemaIssue } from "@satori/ipc-contract/ipc/contract"
+import { CalendarDays, Plus, Search, RefreshCw, AlertCircle } from "lucide-react"
 import { Button } from "../ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
+import { DataTable, type DataTableColumn } from "../data-table/DataTable"
+import { DataTablePagination } from "../data-table/DataTablePagination"
+import { RowActionsMenu } from "../data-table/RowActionsMenu"
 import {
   Dialog,
   DialogContent,
@@ -9,13 +12,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "../ui/dialog"
 import { Input } from "../ui/input"
 import { Label } from "../ui/label"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
 import { Textarea } from "../ui/textarea"
 import { SchemaIssueList } from "../SchemaIssueList"
 import { formatDateTime } from "../../utils/date"
+import { Alert, AlertDescription } from "../ui/alert"
+import { PageHeader, PageContainer } from "../layout/PageHeader"
+import { EmptyState } from "../ui/empty-state"
+import { Badge } from "../ui/badge"
 
 export type EventsCreateFormState = {
   readonly open: boolean
@@ -39,71 +46,152 @@ export type EventsPageProps = {
   readonly loading: boolean
   readonly error: string | null
   readonly events: ReadonlyArray<Event>
+  readonly eventsTotal: number
+  readonly pageIndex: number
+  readonly pageSize: number
+  readonly onPageIndexChange: (pageIndex: number) => void
+  readonly onPageSizeChange: (pageSize: number) => void
   readonly onQueryChange: (value: string) => void
   readonly onRefresh: () => void
   readonly onDelete: (id: string) => void
   readonly create: EventsCreateFormState
 }
 
+const getEventStatus = (event: Event): { label: string; variant: "default" | "secondary" | "outline" } => {
+  const now = Date.now()
+  if (event.endsAtMs && event.endsAtMs < now) {
+    return { label: "Past", variant: "secondary" }
+  }
+  if (event.startsAtMs <= now) {
+    return { label: "Ongoing", variant: "default" }
+  }
+  return { label: "Upcoming", variant: "outline" }
+}
+
+const eventsColumns = (onDelete: (id: string) => void): ReadonlyArray<DataTableColumn<Event>> => [
+  {
+    id: "event",
+    header: "Event",
+    cell: (event) => (
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <CalendarDays className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate font-medium">{event.title}</p>
+          {event.description ? (
+            <p className="truncate text-sm text-muted-foreground">{event.description}</p>
+          ) : null}
+        </div>
+      </div>
+    ),
+  },
+  {
+    id: "startsAt",
+    header: "Date & Time",
+    cell: (event) => (
+      <div className="text-sm">
+        <p>{formatDateTime(event.startsAtMs)}</p>
+        {event.endsAtMs ? (
+          <p className="text-muted-foreground">to {formatDateTime(event.endsAtMs)}</p>
+        ) : null}
+      </div>
+    ),
+  },
+  {
+    id: "status",
+    header: "Status",
+    headerClassName: "w-[100px]",
+    cell: (event) => {
+      const status = getEventStatus(event)
+      return <Badge variant={status.variant}>{status.label}</Badge>
+    },
+  },
+  {
+    id: "actions",
+    header: "",
+    headerClassName: "w-[56px]",
+    cellClassName: "text-right",
+    cell: (event) => (
+      <RowActionsMenu
+        label="Open event actions"
+        actions={[
+          {
+            id: "delete",
+            label: "Delete",
+            destructive: true,
+            onSelect: () => onDelete(event.id),
+          },
+        ]}
+      />
+    ),
+  },
+]
+
 export const EventsPage = ({
   query,
   loading,
   error,
   events,
+  eventsTotal,
+  pageIndex,
+  pageSize,
+  onPageIndexChange,
+  onPageSizeChange,
   onQueryChange,
   onRefresh,
   onDelete,
   create,
 }: EventsPageProps): React.JSX.Element => (
-  <div className="grid gap-6">
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <div className="text-2xl font-semibold">Events</div>
-        <div className="text-sm text-muted-foreground">
-          Create and manage monastery events.
-        </div>
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search title or description…"
-          className="w-full sm:w-[280px]"
-        />
-        <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={onRefresh} disabled={loading}>
-            {loading ? "Loading…" : "Search"}
-          </Button>
-          <Dialog open={create.open} onOpenChange={create.onOpenChange}>
-            <DialogTrigger asChild>
-              <Button>Add event</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create event</DialogTitle>
-              </DialogHeader>
+  <PageContainer>
+    <PageHeader
+      icon={<CalendarDays className="h-5 w-5" />}
+      title="Events"
+      description="Create and manage monastery events and activities."
+      badge={
+        eventsTotal > 0 ? (
+          <Badge variant="secondary">{eventsTotal} total</Badge>
+        ) : null
+      }
+      actions={
+        <Dialog open={create.open} onOpenChange={create.onOpenChange}>
+          <DialogTrigger asChild>
+            <Button size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Event
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Event</DialogTitle>
+              <DialogDescription>
+                Add a new event to your calendar.
+              </DialogDescription>
+            </DialogHeader>
 
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="event-title">Title</Label>
-                  <Input
-                    id="event-title"
-                    value={create.title}
-                    onChange={(event) => create.onTitleChange(event.target.value)}
-                    placeholder="Sunday service"
-                  />
-                </div>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="event-title">Title</Label>
+                <Input
+                  id="event-title"
+                  value={create.title}
+                  onChange={(event) => create.onTitleChange(event.target.value)}
+                  placeholder="Sunday service"
+                />
+              </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="event-description">Description</Label>
-                  <Textarea
-                    id="event-description"
-                    value={create.description}
-                    onChange={(event) => create.onDescriptionChange(event.target.value)}
-                    placeholder="Optional notes"
-                  />
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="event-description">Description</Label>
+                <Textarea
+                  id="event-description"
+                  value={create.description}
+                  onChange={(event) => create.onDescriptionChange(event.target.value)}
+                  placeholder="Optional notes about the event"
+                  rows={3}
+                />
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="event-starts-at">Starts at</Label>
                   <Input
@@ -123,70 +211,81 @@ export const EventsPage = ({
                     onChange={(event) => create.onEndsAtChange(event.target.value)}
                   />
                 </div>
-
-                <SchemaIssueList issues={create.issues} />
-                {create.error ? (
-                  <div className="text-sm text-destructive">{create.error}</div>
-                ) : null}
               </div>
 
-              <DialogFooter>
-                <Button variant="secondary" onClick={create.onCancel}>
-                  Cancel
-                </Button>
-                <Button onClick={create.onSubmit}>Create</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-    </div>
+              <SchemaIssueList issues={create.issues} />
+              {create.error ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{create.error}</AlertDescription>
+                </Alert>
+              ) : null}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={create.onCancel}>
+                Cancel
+              </Button>
+              <Button onClick={create.onSubmit}>Create Event</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      }
+    />
 
     {error ? (
-      <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-        {error}
-      </div>
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
     ) : null}
 
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">All events</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Starts</TableHead>
-              <TableHead className="w-[120px] text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {events.map((event) => (
-              <TableRow key={event.id}>
-                <TableCell className="font-medium">{event.title}</TableCell>
-                <TableCell>{formatDateTime(event.startsAtMs)}</TableCell>
-                <TableCell className="text-right">
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => onDelete(event.id)}
-                  >
-                    Delete
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {events.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={3} className="py-6 text-center text-muted-foreground">
-                  No events found.
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  </div>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative w-full max-w-sm">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+          placeholder="Search events..."
+          className="pl-8"
+        />
+      </div>
+      <Button variant="outline" size="sm" onClick={onRefresh} disabled={loading}>
+        <RefreshCw className={loading ? "mr-2 h-4 w-4 animate-spin" : "mr-2 h-4 w-4"} />
+        {loading ? "Loading..." : "Refresh"}
+      </Button>
+    </div>
+
+    {events.length === 0 && !loading ? (
+      <EmptyState
+        icon={<CalendarDays className="h-6 w-6" />}
+        title="No events found"
+        description={query ? "Try adjusting your search terms." : "Get started by creating your first event."}
+        action={
+          !query ? (
+            <Button size="sm" onClick={() => create.onOpenChange(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Event
+            </Button>
+          ) : undefined
+        }
+      />
+    ) : (
+      <>
+        <DataTable
+          columns={eventsColumns(onDelete)}
+          rows={events}
+          loading={loading}
+          getRowKey={(event) => event.id}
+        />
+        <DataTablePagination
+          totalItems={eventsTotal}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          onPageIndexChange={onPageIndexChange}
+          onPageSizeChange={onPageSizeChange}
+        />
+      </>
+    )}
+  </PageContainer>
 )
