@@ -25,6 +25,7 @@ import type { Person } from '@satori/domain/domain/person'
 import type { SchemaIssue } from '@satori/ipc-contract/ipc/contract'
 import { createStore } from '../utils/store'
 import { createSchemaFormValidator } from '../utils/formValidation'
+import { AuthStore } from '../services/AuthStore'
 import {
   formatDate,
   formatDateTime,
@@ -347,6 +348,11 @@ export const EventDetailContainer = ({
     eventDetailStore.getSnapshot,
     eventDetailStore.getSnapshot
   )
+  const authState = useSyncExternalStore(
+    AuthStore.subscribe,
+    AuthStore.getSnapshot,
+    AuthStore.getSnapshot
+  )
 
   const [dayCreateOpen, setDayCreateOpen] = useState(false)
   const [dayCreateError, setDayCreateError] = useState<string | null>(null)
@@ -357,6 +363,7 @@ export const EventDetailContainer = ({
   const [attendeeEditTarget, setAttendeeEditTarget] = useState<EventAttendee | null>(null)
 
   const event = detail.event
+  const checkedInBy = authState._tag === 'Authenticated' ? authState.email : null
 
   const days = useMemo(
     () => [...detail.days].sort((left, right) => left.dayNumber - right.dayNumber),
@@ -713,7 +720,7 @@ export const EventDetailContainer = ({
             eventDayId: dayId,
             status: 'present',
             checkedInAtMs: nowMs,
-            checkedInBy: null
+            checkedInBy
           })
           .then(
             (result) => {
@@ -743,7 +750,8 @@ export const EventDetailContainer = ({
           eventDayId: dayId,
           status: nextStatus,
           checkedInAtMs: nextStatus === 'present' ? nowMs : null,
-          checkedInBy: nextStatus === 'present' ? existing.checkedInBy : null
+          checkedInBy:
+            nextStatus === 'present' ? (checkedInBy ?? existing.checkedInBy) : null
         })
         .then(
           (result) => {
@@ -763,7 +771,7 @@ export const EventDetailContainer = ({
             }))
         )
     },
-    [attendanceMap, refresh]
+    [attendanceMap, checkedInBy, refresh]
   )
 
   if (!event) {
@@ -1266,15 +1274,28 @@ export const EventDetailContainer = ({
                           makeAttendanceKey(row.attendee.id, day.id)
                         )
                         const present = record?.status === 'present'
+                        const showDetails = record
+                          ? record.checkedInAtMs !== null || record.checkedInBy !== null
+                          : false
                         return (
                           <TableCell key={day.id} className="text-center">
-                            <Button
-                              size="sm"
-                              variant={present ? 'default' : 'outline'}
-                              onClick={() => toggleAttendance(row.attendee.id, day.id)}
-                            >
-                              {present ? 'Present' : 'Absent'}
-                            </Button>
+                            <div className="flex flex-col items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant={present ? 'default' : 'outline'}
+                                onClick={() => toggleAttendance(row.attendee.id, day.id)}
+                              >
+                                {present ? 'Present' : 'Absent'}
+                              </Button>
+                              {showDetails ? (
+                                <div className="text-xs text-muted-foreground">
+                                  {record?.checkedInAtMs
+                                    ? formatDateTime(record.checkedInAtMs)
+                                    : 'Checked in'}
+                                  {record?.checkedInBy ? ` · ${record.checkedInBy}` : ''}
+                                </div>
+                              ) : null}
+                            </div>
                           </TableCell>
                         )
                       })}
