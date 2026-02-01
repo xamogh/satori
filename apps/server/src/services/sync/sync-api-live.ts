@@ -13,6 +13,13 @@ export const SyncApiLive = HttpApiBuilder.group(Api, "sync", (handlers) =>
 
     return handlers.handle("sync", ({ payload }) =>
       service.sync(payload).pipe(
+        Effect.tapError((error) =>
+          error._tag === "DbError"
+            ? Effect.sync(() => {
+                console.error("Sync DB error", error.cause)
+              })
+            : Effect.void
+        ),
         Effect.catchTag("DbError", (error) =>
           new InternalServerError({
             message: "Sync failed",
