@@ -29,6 +29,22 @@
       "types": "./dist/domain/event.d.ts",
       "default": "./dist/domain/event.js"
     },
+    "./domain/empowerment": {
+      "types": "./dist/domain/empowerment.d.ts",
+      "default": "./dist/domain/empowerment.js"
+    },
+    "./domain/group": {
+      "types": "./dist/domain/group.d.ts",
+      "default": "./dist/domain/group.js"
+    },
+    "./domain/guru": {
+      "types": "./dist/domain/guru.d.ts",
+      "default": "./dist/domain/guru.js"
+    },
+    "./domain/mahakrama": {
+      "types": "./dist/domain/mahakrama.d.ts",
+      "default": "./dist/domain/mahakrama.js"
+    },
     "./domain/person": {
       "types": "./dist/domain/person.d.ts",
       "default": "./dist/domain/person.js"
@@ -36,10 +52,6 @@
     "./domain/photo": {
       "types": "./dist/domain/photo.d.ts",
       "default": "./dist/domain/photo.js"
-    },
-    "./domain/registration": {
-      "types": "./dist/domain/registration.d.ts",
-      "default": "./dist/domain/registration.js"
     },
     "./sync/schemas": {
       "types": "./dist/sync/schemas.d.ts",

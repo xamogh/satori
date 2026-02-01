@@ -1,9 +1,19 @@
 import { Schema } from "effect"
-import { EntityIdSchema, Nullable, TimestampMsSchema } from "../domain/common"
-import { EventSchema } from "../domain/event"
-import { PersonSchema } from "../domain/person"
-import { RegistrationSchema } from "../domain/registration"
 import { AttendanceSchema } from "../domain/attendance"
+import { EntityIdSchema, Nullable, TimestampMsSchema } from "../domain/common"
+import { EmpowermentSchema } from "../domain/empowerment"
+import {
+  EventAttendeeSchema,
+  EventDaySchema,
+  EventSchema,
+} from "../domain/event"
+import { GroupSchema, PersonGroupSchema } from "../domain/group"
+import { GuruSchema } from "../domain/guru"
+import {
+  MahakramaHistorySchema,
+  MahakramaStepSchema,
+} from "../domain/mahakrama"
+import { PersonSchema } from "../domain/person"
 import { PhotoApiSchema } from "../domain/photo"
 
 export const SyncCursorMsSchema = Schema.Number
@@ -27,6 +37,28 @@ export const SyncOperationSchema = Schema.Union(
     deletedAtMs: TimestampMsSchema,
   }),
   Schema.Struct({
+    _tag: Schema.Literal("EventDayUpsert"),
+    opId: SyncOpIdSchema,
+    eventDay: EventDaySchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("EventDayDelete"),
+    opId: SyncOpIdSchema,
+    eventDayId: EntityIdSchema,
+    deletedAtMs: TimestampMsSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("EventAttendeeUpsert"),
+    opId: SyncOpIdSchema,
+    attendee: EventAttendeeSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("EventAttendeeDelete"),
+    opId: SyncOpIdSchema,
+    attendeeId: EntityIdSchema,
+    deletedAtMs: TimestampMsSchema,
+  }),
+  Schema.Struct({
     _tag: Schema.Literal("PersonUpsert"),
     opId: SyncOpIdSchema,
     person: PersonSchema,
@@ -38,17 +70,6 @@ export const SyncOperationSchema = Schema.Union(
     deletedAtMs: TimestampMsSchema,
   }),
   Schema.Struct({
-    _tag: Schema.Literal("RegistrationUpsert"),
-    opId: SyncOpIdSchema,
-    registration: RegistrationSchema,
-  }),
-  Schema.Struct({
-    _tag: Schema.Literal("RegistrationDelete"),
-    opId: SyncOpIdSchema,
-    registrationId: EntityIdSchema,
-    deletedAtMs: TimestampMsSchema,
-  }),
-  Schema.Struct({
     _tag: Schema.Literal("AttendanceUpsert"),
     opId: SyncOpIdSchema,
     attendance: AttendanceSchema,
@@ -57,6 +78,72 @@ export const SyncOperationSchema = Schema.Union(
     _tag: Schema.Literal("AttendanceDelete"),
     opId: SyncOpIdSchema,
     attendanceId: EntityIdSchema,
+    deletedAtMs: TimestampMsSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("GroupUpsert"),
+    opId: SyncOpIdSchema,
+    group: GroupSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("GroupDelete"),
+    opId: SyncOpIdSchema,
+    groupId: EntityIdSchema,
+    deletedAtMs: TimestampMsSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("PersonGroupUpsert"),
+    opId: SyncOpIdSchema,
+    personGroup: PersonGroupSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("PersonGroupDelete"),
+    opId: SyncOpIdSchema,
+    personGroupId: EntityIdSchema,
+    deletedAtMs: TimestampMsSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("EmpowermentUpsert"),
+    opId: SyncOpIdSchema,
+    empowerment: EmpowermentSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("EmpowermentDelete"),
+    opId: SyncOpIdSchema,
+    empowermentId: EntityIdSchema,
+    deletedAtMs: TimestampMsSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("GuruUpsert"),
+    opId: SyncOpIdSchema,
+    guru: GuruSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("GuruDelete"),
+    opId: SyncOpIdSchema,
+    guruId: EntityIdSchema,
+    deletedAtMs: TimestampMsSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("MahakramaStepUpsert"),
+    opId: SyncOpIdSchema,
+    mahakramaStep: MahakramaStepSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("MahakramaStepDelete"),
+    opId: SyncOpIdSchema,
+    mahakramaStepId: EntityIdSchema,
+    deletedAtMs: TimestampMsSchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("MahakramaHistoryUpsert"),
+    opId: SyncOpIdSchema,
+    mahakramaHistory: MahakramaHistorySchema,
+  }),
+  Schema.Struct({
+    _tag: Schema.Literal("MahakramaHistoryDelete"),
+    opId: SyncOpIdSchema,
+    mahakramaHistoryId: EntityIdSchema,
     deletedAtMs: TimestampMsSchema,
   }),
   Schema.Struct({
@@ -83,9 +170,16 @@ export type SyncRequest = Schema.Schema.Type<typeof SyncRequestSchema>
 
 export const SyncChangesSchema = Schema.Struct({
   events: Schema.Array(EventSchema),
+  eventDays: Schema.Array(EventDaySchema),
+  eventAttendees: Schema.Array(EventAttendeeSchema),
   persons: Schema.Array(PersonSchema),
-  registrations: Schema.Array(RegistrationSchema),
   attendance: Schema.Array(AttendanceSchema),
+  groups: Schema.Array(GroupSchema),
+  personGroups: Schema.Array(PersonGroupSchema),
+  empowerments: Schema.Array(EmpowermentSchema),
+  gurus: Schema.Array(GuruSchema),
+  mahakramaSteps: Schema.Array(MahakramaStepSchema),
+  mahakramaHistory: Schema.Array(MahakramaHistorySchema),
   photos: Schema.Array(PhotoApiSchema),
 })
 

@@ -10,10 +10,11 @@ export type AttendanceStatus = Schema.Schema.Type<typeof AttendanceStatusSchema>
 
 export const AttendanceSchema = Schema.Struct({
   id: EntityIdSchema,
-  eventId: EntityIdSchema,
-  personId: EntityIdSchema,
-  date: Schema.NonEmptyTrimmedString,
+  eventAttendeeId: EntityIdSchema,
+  eventDayId: EntityIdSchema,
   status: AttendanceStatusSchema,
+  checkedInAtMs: Nullable(TimestampMsSchema),
+  checkedInBy: Nullable(Schema.String),
   updatedAtMs: TimestampMsSchema,
   deletedAtMs: Nullable(TimestampMsSchema),
   serverModifiedAtMs: Nullable(TimestampMsSchema),
@@ -22,20 +23,22 @@ export const AttendanceSchema = Schema.Struct({
 export type Attendance = Schema.Schema.Type<typeof AttendanceSchema>
 
 export const AttendanceCreateInputSchema = Schema.Struct({
-  eventId: EntityIdSchema,
-  personId: EntityIdSchema,
-  date: Schema.NonEmptyTrimmedString,
+  eventAttendeeId: EntityIdSchema,
+  eventDayId: EntityIdSchema,
   status: AttendanceStatusSchema,
+  checkedInAtMs: Nullable(TimestampMsSchema),
+  checkedInBy: Nullable(Schema.String),
 })
 
 export type AttendanceCreateInput = Schema.Schema.Type<typeof AttendanceCreateInputSchema>
 
 export const AttendanceUpdateInputSchema = Schema.Struct({
   id: EntityIdSchema,
-  eventId: EntityIdSchema,
-  personId: EntityIdSchema,
-  date: Schema.NonEmptyTrimmedString,
+  eventAttendeeId: EntityIdSchema,
+  eventDayId: EntityIdSchema,
   status: AttendanceStatusSchema,
+  checkedInAtMs: Nullable(TimestampMsSchema),
+  checkedInBy: Nullable(Schema.String),
 })
 
 export type AttendanceUpdateInput = Schema.Schema.Type<typeof AttendanceUpdateInputSchema>
@@ -48,7 +51,8 @@ export type AttendanceDeleteInput = Schema.Schema.Type<typeof AttendanceDeleteIn
 
 export const AttendanceListQuerySchema = Schema.Struct({
   eventId: Schema.optional(EntityIdSchema),
-  personId: Schema.optional(EntityIdSchema),
+  eventDayId: Schema.optional(EntityIdSchema),
+  eventAttendeeId: Schema.optional(EntityIdSchema),
 })
 
 export type AttendanceListQuery = Schema.Schema.Type<typeof AttendanceListQuerySchema>
