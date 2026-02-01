@@ -43,3 +43,20 @@ export const parseDateTimeLocalMs = (raw: string): number | null => {
   const ms = Date.parse(trimmed)
   return Number.isFinite(ms) ? ms : null
 }
+
+const padTime = (value: number): string => String(value).padStart(2, '0')
+
+export const formatDateTimeLocalInput = (timestampMs: number | null): string => {
+  if (typeof timestampMs !== 'number') {
+    return ''
+  }
+
+  const date = new Date(timestampMs)
+  const year = date.getFullYear()
+  const month = padTime(date.getMonth() + 1)
+  const day = padTime(date.getDate())
+  const hours = padTime(date.getHours())
+  const minutes = padTime(date.getMinutes())
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
