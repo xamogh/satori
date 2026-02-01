@@ -1,6 +1,7 @@
 import { ipcMain } from "electron"
 import { Cause, Effect, Exit, Option, ParseResult, Schema } from "effect"
 import { IpcError } from "../errors"
+import { isAllowedRendererUrl } from "../utils/security"
 import {
   IpcRoutes,
   makeErr,
@@ -31,9 +32,17 @@ const registerHandler = <
       ipcMain.handle(
         route.channel,
         async (
-          _event,
+          event,
           payload: RequestEncoded
         ) => {
+          const senderFrameUrl = event.senderFrame?.url ?? null
+          if (senderFrameUrl === null || !isAllowedRendererUrl(senderFrameUrl)) {
+            return makeErr({
+              _tag: "Unauthorized",
+              message: "Unauthorized",
+            })
+          }
+
           const program = Effect.gen(function* () {
             const requestExit = yield* Effect.exit(
               Schema.decodeUnknown(route.request)(payload)

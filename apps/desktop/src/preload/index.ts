@@ -1,5 +1,4 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
 import { Cause, Effect, Exit, Option, ParseResult, Schema } from 'effect'
 import { IpcResultSchema, IpcRoutes, makeErr, type IpcApi, type IpcResult } from '@satori/ipc-contract/ipc/contract'
 import { formatParseIssues } from '@satori/ipc-contract/utils/parseIssue'
@@ -116,6 +115,12 @@ const api: IpcApi = {
   syncStatus: () => invokeRoute(IpcRoutes.syncStatus, undefined),
 }
 
+const versions = {
+  electron: process.versions.electron ?? '',
+  chrome: process.versions.chrome ?? '',
+  node: process.versions.node ?? '',
+} as const
+
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
@@ -123,7 +128,7 @@ if (process.contextIsolated) {
   const exit = Effect.runSyncExit(
     Effect.try({
       try: () => {
-        contextBridge.exposeInMainWorld('electron', electronAPI)
+        contextBridge.exposeInMainWorld('versions', versions)
         contextBridge.exposeInMainWorld('api', api)
       },
       catch: (cause) =>
@@ -139,10 +144,10 @@ if (process.contextIsolated) {
   }
 } else {
   const globalWindow = globalThis as typeof globalThis & {
-    electron: typeof electronAPI
+    versions: typeof versions
     api: IpcApi
   }
 
-  globalWindow.electron = electronAPI
+  globalWindow.versions = versions
   globalWindow.api = api
 }

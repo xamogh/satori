@@ -1,9 +1,14 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
 import { IpcApi } from '@satori/ipc-contract/ipc/contract'
+
+export type AppVersions = Readonly<{
+  electron: string
+  chrome: string
+  node: string
+}>
 
 declare global {
   interface Window {
-    electron: ElectronAPI
+    versions: AppVersions
     api: IpcApi
   }
 }

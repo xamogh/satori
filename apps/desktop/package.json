@@ -11,7 +11,7 @@
     "typecheck": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && pnpm -C ../../packages/ipc-contract build && pnpm -s typecheck:node && pnpm -s typecheck:web",
     "start": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && pnpm -C ../../packages/ipc-contract build && node --env-file-if-exists ../../.env node_modules/electron-vite/bin/electron-vite.js preview",
     "dev": "pnpm -C ../../packages/domain build && pnpm -C ../../packages/api-contract build && pnpm -C ../../packages/ipc-contract build && node --env-file-if-exists ../../.env node_modules/electron-vite/bin/electron-vite.js dev",
-    "build": "pnpm -s typecheck && electron-vite build",
+    "build": "pnpm -s typecheck && node scripts/electron-vite-build.mjs",
     "rebuild:native": "electron-builder install-app-deps",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "pnpm -s build && electron-builder --dir",

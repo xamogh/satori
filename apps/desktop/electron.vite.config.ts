@@ -17,6 +17,10 @@ export default defineConfig({
     }
   },
   preload: {
+    build: {
+      externalizeDeps: false,
+      isolatedEntries: true
+    },
     resolve: {
       alias: {
         '@satori/domain': domainSrc,

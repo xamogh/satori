@@ -1,4 +1,4 @@
-import { BrowserWindow, shell } from "electron"
+import { BrowserWindow } from "electron"
 import { join } from "path"
 import { is } from "@electron-toolkit/utils"
 import { Effect, Option } from "effect"
@@ -7,6 +7,7 @@ import {
   DEFAULT_WINDOW_WIDTH,
   DEFAULT_WINDOW_HEIGHT,
 } from "../constants/window"
+import { APP_PROTOCOL_ROOT_URL } from "../constants/security"
 import { FileLoadError } from "../errors"
 
 const makeWindowService = Effect.sync(() => {
@@ -22,17 +23,17 @@ const makeWindowService = Effect.sync(() => {
         ...(process.platform === "linux" ? { icon } : {}),
         webPreferences: {
           preload: join(__dirname, "../preload/index.js"),
-          sandbox: false,
+          sandbox: true,
+          contextIsolation: true,
+          nodeIntegration: false,
+          nodeIntegrationInWorker: false,
+          nodeIntegrationInSubFrames: false,
+          webviewTag: false,
         },
       })
 
       window.on("ready-to-show", () => {
         window.show()
-      })
-
-      window.webContents.setWindowOpenHandler((details) => {
-        shell.openExternal(details.url)
-        return { action: "deny" }
       })
 
       yield* loadWindowContent(window)
@@ -60,13 +61,12 @@ const loadWindowContent = (
           }),
       })
     } else {
-      const filePath = join(__dirname, "../renderer/index.html")
       yield* Effect.tryPromise({
-        try: () => window.loadFile(filePath),
+        try: () => window.loadURL(APP_PROTOCOL_ROOT_URL),
         catch: (error) =>
           new FileLoadError({
-            message: "Failed to load production file",
-            path: filePath,
+            message: "Failed to load app protocol URL",
+            path: APP_PROTOCOL_ROOT_URL,
             cause: error,
           }),
       })
