@@ -137,13 +137,18 @@ Maintainer flow:
 2. Merge the generated release PR.
 3. Wait for `Release Binaries` to finish and verify assets in the GitHub Release page.
 
-Optional production signing/notarization secrets (recommended before public distribution):
+Required for distributable macOS releases (Gatekeeper-safe):
 
 - `APPLE_ID`
 - `APPLE_APP_SPECIFIC_PASSWORD`
 - `APPLE_TEAM_ID`
 - `CSC_LINK`
 - `CSC_KEY_PASSWORD`
+
+Notes:
+
+- Without these secrets, macOS apps are unsigned/unnotarized and users will see "Apple could not verify..." with move-to-trash prompts.
+- `Release Binaries` now fails the macOS matrix job if these secrets are missing, so broken mac release assets are not published silently.
 
 Required GitHub settings for release PR creation:
 
