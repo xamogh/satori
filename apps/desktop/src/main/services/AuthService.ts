@@ -84,6 +84,7 @@ const passwordHashParams = {
 
 const passwordSaltBytes = 16
 const passwordKeyBytes = 32
+const maxTimerDelayMs = 2_147_483_647
 
 const authSessionFilePath = (): string => join(app.getPath('userData'), AUTH_SESSION_FILENAME)
 
@@ -478,8 +479,33 @@ const makeAuthService = Effect.gen(function* () {
       return
     }
 
+    if (delayMs > maxTimerDelayMs) {
+      lockTimeout = setTimeout(() => {
+        if (currentAuthState._tag !== 'Authenticated') {
+          return
+        }
+
+        scheduleLock(currentAuthState)
+      }, maxTimerDelayMs)
+
+      return
+    }
+
     lockTimeout = setTimeout(() => {
-      currentAuthState = { _tag: 'Locked', reason: 'TokenExpired', email: state.email }
+      if (currentAuthState._tag !== 'Authenticated') {
+        return
+      }
+
+      if (currentAuthState.expiresAtMs <= Date.now()) {
+        currentAuthState = {
+          _tag: 'Locked',
+          reason: 'TokenExpired',
+          email: currentAuthState.email
+        }
+        return
+      }
+
+      scheduleLock(currentAuthState)
     }, delayMs)
   }
 
