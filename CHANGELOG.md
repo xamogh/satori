@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/xamogh/satori/compare/1.1.0...v1.1.1) (2026-02-12)
+
+
+### Bug Fixes
+
+* **desktop:** avoid runtime crash from platform-node root import ([0c71971](https://github.com/xamogh/satori/commit/0c71971697bf3d8e9b23f7f03b660f6f0b476007))
+* **release:** enforce notarized mac binaries for distribution ([d5581f7](https://github.com/xamogh/satori/commit/d5581f7af12269ca753d56e570abbc7a024d9ec2))
+
 ## [1.1.0](https://github.com/xamogh/satori/compare/v1.0.0...v1.1.0) (2026-02-12)
 
 
