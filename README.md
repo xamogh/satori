@@ -45,16 +45,17 @@ $ set +a
 
 ### Postgres (local)
 
-If you already have Postgres running, skip this. For local dev:
+Start local Postgres with Docker Compose:
 
 ```bash
-$ docker run --name satori-postgres \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=satori_desktop \
-  -p 5432:5432 \
-  -d postgres:16
+$ docker compose up -d
 ```
+
+This boots Postgres on `localhost:5432`, applies `apps/server/sql/schema.sql` on
+first run, and seeds a dev admin user:
+
+- Email: `seeded.admin@satori.local`
+- Password: `SatoriDev#2026`
 
 ### Server (auth + sync API)
 
@@ -65,19 +66,7 @@ $ export DATABASE_URL="postgres://postgres:postgres@localhost:5432/satori_deskto
 $ export JWT_SECRET="change-me-to-a-long-random-string"
 ```
 
-2) Apply schema (idempotent):
-
-```bash
-$ pnpm server:migrate
-```
-
-3) Create a user:
-
-```bash
-$ pnpm server:create-user -- --email you@example.com --password "..." --role staff
-```
-
-4) Start the server:
+2) Start the server:
 
 ```bash
 $ pnpm server:start
@@ -86,6 +75,20 @@ $ pnpm server:start
 JWT expiry defaults to `259200` seconds (3 days). When expired, the desktop app locks and requires re-login (internet required).
 
 ### Development (desktop app)
+
+Recommended full local flow:
+
+```bash
+$ pnpm install
+$ cp env.example .env
+$ docker compose up -d
+$ pnpm dev
+```
+
+Default seeded login (local dev):
+
+- Email: `seeded.admin@satori.local`
+- Password: `SatoriDev#2026`
 
 ```bash
 $ export SATORI_API_BASE_URL="http://localhost:4000"
@@ -124,3 +127,18 @@ If you see an error mentioning `NODE_MODULE_VERSION` (native module ABI mismatch
 ```bash
 $ pnpm rebuild:native
 ```
+
+### Re-run DB initialization scripts
+
+If you need Compose to re-apply schema + seed scripts from scratch:
+
+```bash
+$ docker compose down -v
+$ docker compose up -d
+```
+
+### Port 5432 already in use
+
+If `docker compose up` fails because `5432` is already allocated, stop the
+other Postgres/container using that port (or change the published port in
+`compose.yaml`).
