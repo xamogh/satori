@@ -17,6 +17,14 @@ export type AuthScreenProps = {
   readonly mode: 'unauthenticated' | 'locked'
   readonly form: FormApiFor<AuthFormValues>
   readonly error: string | null
+  readonly identityLabel?: string
+  readonly identityPlaceholder?: string
+  readonly identityInputType?: 'text' | 'email'
+  readonly identityAutoComplete?: string
+  readonly unauthenticatedDescription?: string
+  readonly lockedDescription?: string
+  readonly submitLabel?: string
+  readonly submittingLabel?: string
 }
 
 export const AuthScreen = ({
@@ -24,6 +32,14 @@ export const AuthScreen = ({
   mode,
   form,
   error,
+  identityLabel = 'Email',
+  identityPlaceholder = 'you@example.com',
+  identityInputType = 'email',
+  identityAutoComplete = 'email',
+  unauthenticatedDescription = 'Sign in to continue to your account',
+  lockedDescription = 'Session expired. Please sign in again.',
+  submitLabel = 'Sign in',
+  submittingLabel = 'Signing in...'
 }: AuthScreenProps): React.JSX.Element => (
   <div className="relative flex min-h-screen items-center justify-center p-6">
     {/* Gradient background */}
@@ -38,9 +54,7 @@ export const AuthScreen = ({
         </div>
         <CardTitle className="text-2xl">{appName}</CardTitle>
         <CardDescription>
-          {mode === 'locked'
-            ? 'Session expired. Please sign in again.'
-            : 'Sign in to continue to your account'}
+          {mode === 'locked' ? lockedDescription : unauthenticatedDescription}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
@@ -55,15 +69,15 @@ export const AuthScreen = ({
           <form.Field name="email">
             {(field) => (
               <div className="grid gap-2">
-                <Label htmlFor={field.name}>Email</Label>
+                <Label htmlFor={field.name}>{identityLabel}</Label>
                 <Input
                   id={field.name}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(event) => field.handleChange(event.target.value)}
-                  placeholder="you@example.com"
-                  type="email"
-                  autoComplete="email"
+                  placeholder={identityPlaceholder}
+                  type={identityInputType}
+                  autoComplete={identityAutoComplete}
                 />
                 <FormFieldError errors={field.state.meta.errors} />
               </div>
@@ -102,7 +116,7 @@ export const AuthScreen = ({
           >
             {({ canSubmit, isSubmitting }) => (
               <Button type="submit" disabled={!canSubmit} className="w-full">
-                {isSubmitting ? 'Signing in...' : 'Sign in'}
+                {isSubmitting ? submittingLabel : submitLabel}
               </Button>
             )}
           </form.Subscribe>

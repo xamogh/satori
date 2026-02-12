@@ -18,58 +18,63 @@ export type DashboardContainerProps = {
   readonly auth: AuthenticatedState
   readonly onSignOut: () => void
   readonly appError: string | null
+  readonly syncEnabled: boolean
 }
 
 export const DashboardContainer = ({
   auth,
   onSignOut,
-  appError
+  appError,
+  syncEnabled
 }: DashboardContainerProps): React.JSX.Element => {
   const [route, setRoute] = useState<DashboardRouteType>(DashboardRoute.overview)
   const [search, setSearch] = useState('')
 
-  const navItems = useMemo(
-    () =>
-      [
-        {
-          key: DashboardRoute.overview,
-          label: 'Dashboard',
-          icon: <LayoutDashboard className="h-4 w-4" />
-        },
-        {
-          key: DashboardRoute.events,
-          label: 'Events',
-          icon: <CalendarDays className="h-4 w-4" />
-        },
-        {
-          key: DashboardRoute.people,
-          label: 'People',
-          icon: <Users className="h-4 w-4" />
-        },
-        {
-          key: DashboardRoute.groups,
-          label: 'Groups',
-          icon: <Users className="h-4 w-4" />
-        },
-        {
-          key: DashboardRoute.attendance,
-          label: 'Attendance',
-          icon: <CheckCircle2 className="h-4 w-4" />
-        },
-        {
-          key: DashboardRoute.sync,
-          label: 'Sync',
-          icon: <CloudSync className="h-4 w-4" />
-        }
-      ] as const,
-    []
-  )
+  const navItems = useMemo(() => {
+    const items = [
+      {
+        key: DashboardRoute.overview,
+        label: 'Dashboard',
+        icon: <LayoutDashboard className="h-4 w-4" />
+      },
+      {
+        key: DashboardRoute.events,
+        label: 'Events',
+        icon: <CalendarDays className="h-4 w-4" />
+      },
+      {
+        key: DashboardRoute.people,
+        label: 'People',
+        icon: <Users className="h-4 w-4" />
+      },
+      {
+        key: DashboardRoute.groups,
+        label: 'Groups',
+        icon: <Users className="h-4 w-4" />
+      },
+      {
+        key: DashboardRoute.attendance,
+        label: 'Attendance',
+        icon: <CheckCircle2 className="h-4 w-4" />
+      }
+    ] as const
+
+    return syncEnabled
+      ? [
+          ...items,
+          { key: DashboardRoute.sync, label: 'Sync', icon: <CloudSync className="h-4 w-4" /> }
+        ]
+      : items
+  }, [syncEnabled])
+
+  const activeRoute =
+    !syncEnabled && route === DashboardRoute.sync ? DashboardRoute.overview : route
 
   return (
     <DashboardLayout
       appName="Satori Desktop"
       navItems={navItems}
-      activeKey={route}
+      activeKey={activeRoute}
       onNavigate={setRoute}
       searchValue={search}
       onSearchValueChange={setSearch}
@@ -83,12 +88,12 @@ export const DashboardContainer = ({
         </Alert>
       ) : null}
 
-      {route === DashboardRoute.overview ? <OverviewContainer /> : null}
-      {route === DashboardRoute.events ? <EventsContainer /> : null}
-      {route === DashboardRoute.people ? <PeopleContainer /> : null}
-      {route === DashboardRoute.groups ? <GroupsContainer /> : null}
-      {route === DashboardRoute.attendance ? <AttendanceContainer /> : null}
-      {route === DashboardRoute.sync ? <SyncContainer /> : null}
+      {activeRoute === DashboardRoute.overview ? <OverviewContainer /> : null}
+      {activeRoute === DashboardRoute.events ? <EventsContainer /> : null}
+      {activeRoute === DashboardRoute.people ? <PeopleContainer /> : null}
+      {activeRoute === DashboardRoute.groups ? <GroupsContainer /> : null}
+      {activeRoute === DashboardRoute.attendance ? <AttendanceContainer /> : null}
+      {activeRoute === DashboardRoute.sync ? <SyncContainer /> : null}
     </DashboardLayout>
   )
 }

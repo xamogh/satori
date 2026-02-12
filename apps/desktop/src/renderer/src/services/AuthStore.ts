@@ -1,5 +1,10 @@
 import { createStore } from '../utils/store'
-import type { AuthSignInRequest, AuthState, IpcResult } from '@satori/ipc-contract/ipc/contract'
+import type {
+  AuthSignInRequest,
+  AuthState,
+  IpcResult,
+  LocalAuthCredentials
+} from '@satori/ipc-contract/ipc/contract'
 
 export type AuthViewState = { readonly _tag: 'Loading' } | AuthState
 
@@ -76,6 +81,15 @@ const signIn = (payload: AuthSignInRequest): Promise<IpcResult<AuthState>> =>
     return result
   })
 
+const localSignIn = (payload: LocalAuthCredentials): Promise<IpcResult<AuthState>> =>
+  window.api.authLocalSignIn(payload).then((result) => {
+    if (result._tag === 'Ok') {
+      setAuthState(result.value)
+    }
+
+    return result
+  })
+
 const signOut = (): Promise<IpcResult<AuthState>> =>
   window.api.authSignOut().then((result) => {
     if (result._tag === 'Ok') {
@@ -90,5 +104,6 @@ export const AuthStore = {
   getSnapshot: authStore.getSnapshot,
   refresh,
   signIn,
+  localSignIn,
   signOut
 } as const
