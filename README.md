@@ -145,6 +145,17 @@ Optional production signing/notarization secrets (recommended before public dist
 - `CSC_LINK`
 - `CSC_KEY_PASSWORD`
 
+Required GitHub settings for release PR creation:
+
+1. Repository `Settings` -> `Actions` -> `General` -> `Workflow permissions`
+2. Set `Read and write permissions`
+3. Enable `Allow GitHub Actions to create and approve pull requests`
+
+Optional (recommended) secret for Release Please:
+
+- `RELEASE_PLEASE_TOKEN`: GitHub token with `contents: write` and `pull_requests: write`
+- If this secret is present, the workflow uses it; otherwise it falls back to `GITHUB_TOKEN`.
+
 ## Troubleshooting
 
 ### LocalDbOpenError / NODE_MODULE_VERSION mismatch
