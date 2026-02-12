@@ -1,11 +1,17 @@
 import { Schema } from 'effect'
 import {
+  AuthModeSchema,
+  AuthModeStatusSchema,
   AuthSignInRequestSchema,
   AuthStateSchema,
   EmailSchema,
+  LocalAuthCredentialsSchema,
   UserRoleSchema,
+  type AuthMode,
+  type AuthModeStatus,
   type AuthSignInRequest,
   type AuthState,
+  type LocalAuthCredentials,
   type UserRole
 } from '@satori/domain/auth/schemas'
 import {
@@ -88,6 +94,10 @@ import { SyncStatusSchema } from '@satori/domain/sync/schemas'
 export const IpcChannel = {
   ping: 'satori-desktop:ping',
   echo: 'satori-desktop:echo',
+  authModeStatus: 'satori-desktop:auth:mode-status',
+  authSelectMode: 'satori-desktop:auth:select-mode',
+  authLocalOnboard: 'satori-desktop:auth:local-onboard',
+  authLocalSignIn: 'satori-desktop:auth:local-sign-in',
   authStatus: 'satori-desktop:auth:status',
   authSignIn: 'satori-desktop:auth:sign-in',
   authSignOut: 'satori-desktop:auth:sign-out',
@@ -153,9 +163,24 @@ export const EchoResponseSchema = Schema.Struct({
   message: Schema.String
 })
 
-export { UserRoleSchema, EmailSchema, AuthSignInRequestSchema, AuthStateSchema }
+export {
+  UserRoleSchema,
+  EmailSchema,
+  AuthSignInRequestSchema,
+  LocalAuthCredentialsSchema,
+  AuthModeSchema,
+  AuthModeStatusSchema,
+  AuthStateSchema
+}
 
-export type { UserRole, AuthSignInRequest, AuthState }
+export type {
+  UserRole,
+  AuthSignInRequest,
+  LocalAuthCredentials,
+  AuthMode,
+  AuthModeStatus,
+  AuthState
+}
 
 export const SchemaIssueSchema = Schema.Struct({
   path: Schema.Array(Schema.String),
@@ -235,6 +260,26 @@ export const IpcRoutes = {
     channel: IpcChannel.echo,
     request: EchoRequestSchema,
     response: EchoResponseSchema
+  },
+  authModeStatus: {
+    channel: IpcChannel.authModeStatus,
+    request: Schema.Void,
+    response: AuthModeStatusSchema
+  },
+  authSelectMode: {
+    channel: IpcChannel.authSelectMode,
+    request: AuthModeSchema,
+    response: AuthModeStatusSchema
+  },
+  authLocalOnboard: {
+    channel: IpcChannel.authLocalOnboard,
+    request: LocalAuthCredentialsSchema,
+    response: AuthStateSchema
+  },
+  authLocalSignIn: {
+    channel: IpcChannel.authLocalSignIn,
+    request: LocalAuthCredentialsSchema,
+    response: AuthStateSchema
   },
   authStatus: {
     channel: IpcChannel.authStatus,

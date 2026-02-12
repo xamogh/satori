@@ -113,6 +113,10 @@ const makeIpcService = Effect.gen(function* () {
 
   return {
     registerHandlers: Effect.all([
+      registerHandler(IpcRoutes.authModeStatus, () => authService.getModeStatus),
+      registerHandler(IpcRoutes.authSelectMode, (mode) => authService.selectMode(mode)),
+      registerHandler(IpcRoutes.authLocalOnboard, (request) => authService.localOnboard(request)),
+      registerHandler(IpcRoutes.authLocalSignIn, (request) => authService.localSignIn(request)),
       registerHandler(IpcRoutes.authStatus, () => authService.getStatus),
       registerHandler(IpcRoutes.authSignIn, (request) => authService.signIn(request)),
       registerHandler(IpcRoutes.authSignOut, () => authService.signOut),

@@ -1,3 +1,4 @@
+import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto'
 import { app, safeStorage } from 'electron'
 import { join } from 'node:path'
 import {
@@ -12,11 +13,21 @@ import { Effect, Either, Option, Schema } from 'effect'
 import { AuthSessionSchema, type AuthSession } from '@satori/api-contract/api/auth/auth-model'
 import { BadRequest, InternalServerError, Unauthorized } from '@satori/api-contract/api/http-errors'
 import {
+  AuthModeSchema,
   AuthSignInRequestSchema,
   UserRoleSchema,
+  type AuthMode,
+  type AuthModeStatus,
   type AuthSignInRequest,
-  type AuthState
+  type AuthState,
+  type LocalAuthCredentials
 } from '@satori/domain/auth/schemas'
+import {
+  AUTH_LOCAL_ACCOUNT_FILENAME,
+  AUTH_MODE_FILENAME,
+  AUTH_SESSION_FILENAME,
+  LOCAL_SESSION_TTL_MS
+} from '../constants/auth'
 import {
   AuthStorageError,
   ApiAuthError,
@@ -37,6 +48,22 @@ const StoredSessionSchema = Schema.Struct({
 
 type StoredSession = Schema.Schema.Type<typeof StoredSessionSchema>
 
+const StoredModeSchema = Schema.Struct({
+  mode: AuthModeSchema
+})
+
+type StoredMode = Schema.Schema.Type<typeof StoredModeSchema>
+
+const LocalAccountSchema = Schema.Struct({
+  userId: Schema.String,
+  username: Schema.String,
+  usernameNormalized: Schema.String,
+  role: UserRoleSchema,
+  passwordHash: Schema.String
+})
+
+type LocalAccount = Schema.Schema.Type<typeof LocalAccountSchema>
+
 class SafeStorageEncryptError extends Schema.TaggedError<SafeStorageEncryptError>(
   'SafeStorageEncryptError'
 )('SafeStorageEncryptError', {
@@ -49,9 +76,25 @@ class SafeStorageDecryptError extends Schema.TaggedError<SafeStorageDecryptError
   cause: Schema.Unknown
 }) {}
 
-const authSessionFilePath = (): string => join(app.getPath('userData'), 'auth.session')
+const passwordHashParams = {
+  cost: 16384,
+  blockSize: 8,
+  parallelization: 1
+} as const
 
-const encryptSessionText = (text: string): Effect.Effect<string, never> =>
+const passwordSaltBytes = 16
+const passwordKeyBytes = 32
+
+const authSessionFilePath = (): string => join(app.getPath('userData'), AUTH_SESSION_FILENAME)
+
+const authModeFilePath = (): string => join(app.getPath('userData'), AUTH_MODE_FILENAME)
+
+const localAccountFilePath = (): string =>
+  join(app.getPath('userData'), AUTH_LOCAL_ACCOUNT_FILENAME)
+
+const encodeBase64 = (bytes: Uint8Array): string => Buffer.from(bytes).toString('base64')
+
+const encryptText = (text: string): Effect.Effect<string, never> =>
   !safeStorage.isEncryptionAvailable()
     ? Effect.succeed(text)
     : Effect.try({
@@ -59,7 +102,7 @@ const encryptSessionText = (text: string): Effect.Effect<string, never> =>
         catch: (cause) => new SafeStorageEncryptError({ cause })
       }).pipe(Effect.catchTag('SafeStorageEncryptError', () => Effect.succeed(text)))
 
-const decryptSessionText = (text: string): Effect.Effect<string, never> =>
+const decryptText = (text: string): Effect.Effect<string, never> =>
   !safeStorage.isEncryptionAvailable()
     ? Effect.succeed(text)
     : Effect.try({
@@ -67,7 +110,7 @@ const decryptSessionText = (text: string): Effect.Effect<string, never> =>
         catch: (cause) => new SafeStorageDecryptError({ cause })
       }).pipe(Effect.catchTag('SafeStorageDecryptError', () => Effect.succeed(text)))
 
-const deleteSessionFileIgnoringErrors = (
+const deleteFileIgnoringErrors = (
   fs: FileSystem.FileSystem,
   filePath: string
 ): Effect.Effect<void, never> =>
@@ -76,14 +119,12 @@ const deleteSessionFileIgnoringErrors = (
     Effect.catchTag('SystemError', () => Effect.void)
   )
 
-const loadStoredSession = (
-  fs: FileSystem.FileSystem
-): Effect.Effect<Option.Option<StoredSession>, AuthStorageError> => {
-  const filePath = authSessionFilePath()
-
-  const decodeStoredSession = Schema.decodeUnknownEither(Schema.parseJson(StoredSessionSchema))
-
-  return fs.readFileString(filePath, 'utf8').pipe(
+const readOptionalEncryptedFile = (
+  fs: FileSystem.FileSystem,
+  filePath: string,
+  message: string
+): Effect.Effect<Option.Option<string>, AuthStorageError> =>
+  fs.readFileString(filePath, 'utf8').pipe(
     Effect.map(Option.some),
     Effect.catchTag('SystemError', (error) =>
       error.reason === 'NotFound' ? Effect.succeed(Option.none()) : Effect.fail(error)
@@ -91,7 +132,7 @@ const loadStoredSession = (
     Effect.mapError(
       (cause) =>
         new AuthStorageError({
-          message: 'Failed to read auth session',
+          message,
           path: filePath,
           cause
         })
@@ -99,15 +140,49 @@ const loadStoredSession = (
     Effect.flatMap((encryptedText) =>
       Option.match(encryptedText, {
         onNone: () => Effect.succeed(Option.none()),
-        onSome: (text) =>
-          decryptSessionText(text).pipe(
-            Effect.flatMap((decrypted) => {
-              const decoded = decodeStoredSession(decrypted)
-              return Either.isLeft(decoded)
-                ? deleteSessionFileIgnoringErrors(fs, filePath).pipe(Effect.as(Option.none()))
-                : Effect.succeed(Option.some(decoded.right))
-            })
-          )
+        onSome: (text) => decryptText(text).pipe(Effect.map(Option.some))
+      })
+    )
+  )
+
+const writeEncryptedFile = (
+  fs: FileSystem.FileSystem,
+  filePath: string,
+  content: string,
+  message: string
+): Effect.Effect<void, AuthStorageError> =>
+  Effect.gen(function* () {
+    const encrypted = yield* encryptText(content)
+
+    yield* fs.writeFileString(filePath, encrypted).pipe(
+      Effect.mapError(
+        (cause) =>
+          new AuthStorageError({
+            message,
+            path: filePath,
+            cause
+          })
+      )
+    )
+  })
+
+const loadStoredSession = (
+  fs: FileSystem.FileSystem
+): Effect.Effect<Option.Option<StoredSession>, AuthStorageError> => {
+  const filePath = authSessionFilePath()
+  const decodeStoredSession = Schema.decodeUnknownEither(Schema.parseJson(StoredSessionSchema))
+
+  return readOptionalEncryptedFile(fs, filePath, 'Failed to read auth session').pipe(
+    Effect.flatMap((rawText) =>
+      Option.match(rawText, {
+        onNone: () => Effect.succeed(Option.none()),
+        onSome: (text) => {
+          const decoded = decodeStoredSession(text)
+
+          return Either.isLeft(decoded)
+            ? deleteFileIgnoringErrors(fs, filePath).pipe(Effect.as(Option.none()))
+            : Effect.succeed(Option.some(decoded.right))
+        }
       })
     )
   )
@@ -118,38 +193,152 @@ const saveStoredSession = (
   session: StoredSession
 ): Effect.Effect<void, AuthStorageError> => {
   const filePath = authSessionFilePath()
-  return Effect.gen(function* () {
-    const text = JSON.stringify(session)
-    const encrypted = yield* encryptSessionText(text)
 
-    yield* fs.writeFileString(filePath, encrypted).pipe(
-      Effect.mapError(
-        (cause) =>
-          new AuthStorageError({
-            message: 'Failed to write auth session',
-            path: filePath,
-            cause
-          })
-      )
-    )
-  })
+  return writeEncryptedFile(fs, filePath, JSON.stringify(session), 'Failed to write auth session')
 }
 
-const deleteStoredSession = (fs: FileSystem.FileSystem): Effect.Effect<void, AuthStorageError> => {
+const deleteStoredSessionFile = (
+  fs: FileSystem.FileSystem
+): Effect.Effect<void, AuthStorageError> => {
   const filePath = authSessionFilePath()
 
-  return Effect.gen(function* () {
-    yield* fs.remove(filePath, { force: true }).pipe(
-      Effect.mapError(
-        (cause) =>
-          new AuthStorageError({
-            message: 'Failed to delete auth session',
-            path: filePath,
-            cause
-          })
-      )
+  return fs.remove(filePath, { force: true }).pipe(
+    Effect.mapError(
+      (cause) =>
+        new AuthStorageError({
+          message: 'Failed to delete auth session',
+          path: filePath,
+          cause
+        })
     )
+  )
+}
+
+const loadStoredMode = (
+  fs: FileSystem.FileSystem
+): Effect.Effect<Option.Option<AuthMode>, AuthStorageError> => {
+  const filePath = authModeFilePath()
+  const decodeStoredMode = Schema.decodeUnknownEither(Schema.parseJson(StoredModeSchema))
+
+  return readOptionalEncryptedFile(fs, filePath, 'Failed to read auth mode').pipe(
+    Effect.flatMap((rawText) =>
+      Option.match(rawText, {
+        onNone: () => Effect.succeed(Option.none()),
+        onSome: (text) => {
+          const decoded = decodeStoredMode(text)
+
+          return Either.isLeft(decoded)
+            ? deleteFileIgnoringErrors(fs, filePath).pipe(Effect.as(Option.none()))
+            : Effect.succeed(Option.some(decoded.right.mode))
+        }
+      })
+    )
+  )
+}
+
+const saveStoredMode = (
+  fs: FileSystem.FileSystem,
+  mode: AuthMode
+): Effect.Effect<void, AuthStorageError> => {
+  const filePath = authModeFilePath()
+  const value: StoredMode = { mode }
+
+  return writeEncryptedFile(fs, filePath, JSON.stringify(value), 'Failed to write auth mode')
+}
+
+const loadLocalAccount = (
+  fs: FileSystem.FileSystem
+): Effect.Effect<Option.Option<LocalAccount>, AuthStorageError> => {
+  const filePath = localAccountFilePath()
+  const decodeLocalAccount = Schema.decodeUnknownEither(Schema.parseJson(LocalAccountSchema))
+
+  return readOptionalEncryptedFile(fs, filePath, 'Failed to read local account').pipe(
+    Effect.flatMap((rawText) =>
+      Option.match(rawText, {
+        onNone: () => Effect.succeed(Option.none()),
+        onSome: (text) => {
+          const decoded = decodeLocalAccount(text)
+
+          return Either.isLeft(decoded)
+            ? deleteFileIgnoringErrors(fs, filePath).pipe(Effect.as(Option.none()))
+            : Effect.succeed(Option.some(decoded.right))
+        }
+      })
+    )
+  )
+}
+
+const saveLocalAccount = (
+  fs: FileSystem.FileSystem,
+  account: LocalAccount
+): Effect.Effect<void, AuthStorageError> => {
+  const filePath = localAccountFilePath()
+
+  return writeEncryptedFile(fs, filePath, JSON.stringify(account), 'Failed to write local account')
+}
+
+const normalizeUsername = (value: string): string => value.trim().toLowerCase()
+
+const hashLocalPassword = (password: string): string => {
+  const salt = randomBytes(passwordSaltBytes)
+  const key = scryptSync(password, salt, passwordKeyBytes, {
+    N: passwordHashParams.cost,
+    r: passwordHashParams.blockSize,
+    p: passwordHashParams.parallelization
   })
+
+  return [
+    'scrypt',
+    String(passwordHashParams.cost),
+    String(passwordHashParams.blockSize),
+    String(passwordHashParams.parallelization),
+    encodeBase64(salt),
+    encodeBase64(key)
+  ].join('$')
+}
+
+const verifyLocalPassword = (password: string, storedHash: string): boolean => {
+  try {
+    const parts = storedHash.split('$')
+    if (parts.length !== 6) {
+      return false
+    }
+
+    const [algo, costRaw, blockSizeRaw, parallelizationRaw, saltRaw, keyRaw] = parts
+
+    if (algo !== 'scrypt') {
+      return false
+    }
+
+    const cost = Number(costRaw)
+    const blockSize = Number(blockSizeRaw)
+    const parallelization = Number(parallelizationRaw)
+
+    if (
+      !Number.isFinite(cost) ||
+      !Number.isFinite(blockSize) ||
+      !Number.isFinite(parallelization)
+    ) {
+      return false
+    }
+
+    const salt = Buffer.from(String(saltRaw), 'base64')
+    const expectedKey = Buffer.from(String(keyRaw), 'base64')
+
+    const candidate = scryptSync(password, salt, expectedKey.byteLength, {
+      N: cost,
+      r: blockSize,
+      p: parallelization
+    })
+
+    if (candidate.byteLength !== expectedKey.byteLength) {
+      return false
+    }
+
+    return timingSafeEqual(Buffer.from(candidate), expectedKey)
+  } catch {
+    return false
+  }
 }
 
 const lockStateFromSession = (session: StoredSession): AuthState => ({
@@ -243,12 +432,25 @@ const authSignInRequest = (
     })
   })
 
+const localSessionFromAccount = (account: LocalAccount): StoredSession => ({
+  accessToken: randomUUID(),
+  userId: account.userId,
+  email: account.username,
+  role: account.role,
+  expiresAtMs: Date.now() + LOCAL_SESSION_TTL_MS
+})
+
 const makeAuthService = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const client = yield* HttpClient.HttpClient
 
   const initialStoredSession = yield* loadStoredSession(fs)
+  const initialStoredMode = yield* loadStoredMode(fs)
+  const initialLocalAccount = yield* loadLocalAccount(fs)
+
   let currentStoredSession = initialStoredSession
+  let currentAuthMode = initialStoredMode
+  let currentLocalAccount = initialLocalAccount
 
   let currentAuthState = Option.isNone(initialStoredSession)
     ? unauthenticatedState
@@ -283,6 +485,19 @@ const makeAuthService = Effect.gen(function* () {
 
   scheduleLock(currentAuthState)
 
+  const modeStatusFromState = (): AuthModeStatus =>
+    Option.match(currentAuthMode, {
+      onNone: () => ({ _tag: 'Unconfigured' }),
+      onSome: (mode) =>
+        mode === 'sync'
+          ? { _tag: 'ConfiguredSync', mode: 'sync' }
+          : {
+              _tag: 'ConfiguredLocal',
+              mode: 'local',
+              localAccountExists: Option.isSome(currentLocalAccount)
+            }
+    })
+
   const setStoredSession = (session: StoredSession): Effect.Effect<void, AuthStorageError> =>
     Effect.tap(saveStoredSession(fs, session), () =>
       Effect.sync(() => {
@@ -293,7 +508,7 @@ const makeAuthService = Effect.gen(function* () {
     )
 
   const clearStoredSession: Effect.Effect<void, AuthStorageError> = Effect.tap(
-    deleteStoredSession(fs),
+    deleteStoredSessionFile(fs),
     () =>
       Effect.sync(() => {
         currentStoredSession = Option.none()
@@ -301,6 +516,23 @@ const makeAuthService = Effect.gen(function* () {
         clearLockTimeout()
       })
   )
+
+  const setAuthMode = (mode: AuthMode): Effect.Effect<void, AuthStorageError> =>
+    Effect.tap(saveStoredMode(fs, mode), () =>
+      Effect.sync(() => {
+        currentAuthMode = Option.some(mode)
+      })
+    )
+
+  const getModeStatus: Effect.Effect<AuthModeStatus, AuthStorageError> =
+    Effect.sync(modeStatusFromState)
+
+  const selectMode = (mode: AuthMode): Effect.Effect<AuthModeStatus, AuthStorageError> =>
+    Effect.gen(function* () {
+      yield* setAuthMode(mode)
+      yield* clearStoredSession
+      return modeStatusFromState()
+    })
 
   const getStatus: Effect.Effect<AuthState, AuthStorageError> = Effect.sync(() => {
     if (currentAuthState._tag === 'Authenticated') {
@@ -328,18 +560,27 @@ const makeAuthService = Effect.gen(function* () {
       Extract<AuthState, { _tag: 'Authenticated' }>,
       UnauthorizedError | LockedError
     > => {
+      const mode = Option.getOrUndefined(currentAuthMode)
+      const requiresInternet = mode !== 'local'
+
       switch (state._tag) {
         case 'Authenticated':
           return Effect.succeed(state)
         case 'Locked':
           return Effect.fail(
             new LockedError({
-              message: 'Session expired. Please sign in again (internet required).'
+              message: requiresInternet
+                ? 'Session expired. Please sign in again (internet required).'
+                : 'Session expired. Please sign in again.'
             })
           )
         case 'Unauthenticated':
           return Effect.fail(
-            new UnauthorizedError({ message: 'Please sign in (internet required).' })
+            new UnauthorizedError({
+              message: requiresInternet
+                ? 'Please sign in (internet required).'
+                : 'Please sign in with your local account.'
+            })
           )
       }
     }
@@ -350,9 +591,7 @@ const makeAuthService = Effect.gen(function* () {
       Effect.flatMap(() =>
         Effect.suspend(() => {
           if (Option.isNone(currentStoredSession)) {
-            return Effect.fail(
-              new UnauthorizedError({ message: 'Please sign in (internet required).' })
-            )
+            return Effect.fail(new UnauthorizedError({ message: 'Please sign in.' }))
           }
 
           return Effect.succeed(currentStoredSession.value.accessToken)
@@ -362,8 +601,24 @@ const makeAuthService = Effect.gen(function* () {
 
   const signIn = (
     request: AuthSignInRequest
-  ): Effect.Effect<AuthState, ApiConfigError | ApiAuthError | AuthStorageError> =>
+  ): Effect.Effect<
+    AuthState,
+    ApiConfigError | ApiAuthError | AuthStorageError | UnauthorizedError
+  > =>
     Effect.gen(function* () {
+      const mode = Option.getOrUndefined(currentAuthMode)
+      if (mode === 'local') {
+        return yield* Effect.fail(
+          new UnauthorizedError({
+            message: 'Local mode is active. Please use local sign-in.'
+          })
+        )
+      }
+
+      if (mode === undefined) {
+        yield* setAuthMode('sync')
+      }
+
       const config = yield* getApiConfig()
       const session = yield* authSignInRequest(client, config, request)
 
@@ -373,14 +628,110 @@ const makeAuthService = Effect.gen(function* () {
       return authenticatedStateFromSession(storedSession)
     })
 
+  const localOnboard = (
+    request: LocalAuthCredentials
+  ): Effect.Effect<AuthState, AuthStorageError | UnauthorizedError> =>
+    Effect.gen(function* () {
+      const mode = Option.getOrUndefined(currentAuthMode)
+
+      if (mode === 'sync') {
+        return yield* Effect.fail(
+          new UnauthorizedError({ message: 'Switch to local mode before local onboarding.' })
+        )
+      }
+
+      if (mode === undefined) {
+        yield* setAuthMode('local')
+      }
+
+      if (Option.isSome(currentLocalAccount)) {
+        return yield* Effect.fail(
+          new UnauthorizedError({
+            message: 'Local account already exists. Please sign in with your local account.'
+          })
+        )
+      }
+
+      const username = request.username.trim()
+      const usernameNormalized = normalizeUsername(username)
+
+      const passwordHash = yield* Effect.try({
+        try: () => hashLocalPassword(request.password),
+        catch: (cause) =>
+          new AuthStorageError({
+            message: 'Failed to hash local password',
+            path: localAccountFilePath(),
+            cause
+          })
+      })
+
+      const account: LocalAccount = {
+        userId: randomUUID(),
+        username,
+        usernameNormalized,
+        role: 'admin',
+        passwordHash
+      }
+
+      yield* saveLocalAccount(fs, account)
+      yield* Effect.sync(() => {
+        currentLocalAccount = Option.some(account)
+      })
+
+      const session = localSessionFromAccount(account)
+      yield* setStoredSession(session)
+
+      return authenticatedStateFromSession(session)
+    })
+
+  const localSignIn = (
+    request: LocalAuthCredentials
+  ): Effect.Effect<AuthState, AuthStorageError | UnauthorizedError> =>
+    Effect.gen(function* () {
+      const mode = Option.getOrUndefined(currentAuthMode)
+
+      if (mode !== 'local') {
+        return yield* Effect.fail(
+          new UnauthorizedError({ message: 'Local sign-in is only available in local mode.' })
+        )
+      }
+
+      if (Option.isNone(currentLocalAccount)) {
+        return yield* Effect.fail(
+          new UnauthorizedError({
+            message: 'No local account found. Complete local onboarding first.'
+          })
+        )
+      }
+
+      const account = currentLocalAccount.value
+      const usernameMatches = normalizeUsername(request.username) === account.usernameNormalized
+      const passwordMatches = verifyLocalPassword(request.password, account.passwordHash)
+
+      if (!usernameMatches || !passwordMatches) {
+        return yield* Effect.fail(
+          new UnauthorizedError({ message: 'Invalid username or password.' })
+        )
+      }
+
+      const session = localSessionFromAccount(account)
+      yield* setStoredSession(session)
+
+      return authenticatedStateFromSession(session)
+    })
+
   const signOut: Effect.Effect<AuthState, AuthStorageError> = Effect.as(
     clearStoredSession,
     unauthenticatedState
   )
 
   return {
+    getModeStatus,
+    selectMode,
     getStatus,
     signIn,
+    localOnboard,
+    localSignIn,
     signOut,
     requireAuthenticated,
     getAccessToken
