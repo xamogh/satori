@@ -84,9 +84,13 @@ export class MyError extends Schema.TaggedError<MyError>("MyError")("MyError", {
 - Big review: `git --no-pager diff --color=never`.
 - Multi-agent: check `git status/diff` before edits; ship small commits.
 
-### Atomic Commits
-- Prefer atomic commits: one logical change per commit; avoid mixing unrelated refactors/features/fixes.
-- Before committing, verify `pnpm typecheck`, `pnpm build`, and `pnpm lint` (and any relevant tests) all pass.
+### Atomic Commits (Strict)
+- MUST create a commit immediately after each completed logical change (no batching).
+- One commit = one concern. Never mix unrelated changes (e.g. bug fix + copy/docs) in the same commit.
+- Do not wait for an explicit “commit now”; commit is expected by default after each small completed change.
+- Before each commit, run: `pnpm typecheck`, `pnpm build`, and `pnpm lint` (plus relevant tests).
+- After each commit, verify `git status` is clean and report the commit hash/message.
+- If a turn ends with uncommitted changes, continue working until commits are created (unless user explicitly says not to commit).
 
 ### Commit Messages
 - Use Conventional Commits (`fix:`, `feat:`, `chore:`, `refactor:`, `fix(ci):`, etc.)
