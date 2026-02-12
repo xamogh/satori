@@ -8,7 +8,7 @@ import {
   HttpClientRequest,
   HttpClientResponse
 } from '@effect/platform'
-import { NodeFileSystem } from '@effect/platform-node'
+import * as NodeFileSystem from '@effect/platform-node/NodeFileSystem'
 import { Effect, Either, Option, Schema } from 'effect'
 import { AuthSessionSchema, type AuthSession } from '@satori/api-contract/api/auth/auth-model'
 import { BadRequest, InternalServerError, Unauthorized } from '@satori/api-contract/api/http-errors'
