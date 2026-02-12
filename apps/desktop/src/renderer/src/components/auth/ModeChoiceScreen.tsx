@@ -59,7 +59,7 @@ export const ModeChoiceScreen = ({
             <h3 className="text-base font-semibold">Run Local-Only</h3>
           </div>
           <p className="text-sm text-muted-foreground">
-            Keep everything on this device and work without depending on the server.
+            Testing mode only. Keep everything on this device without depending on the server.
           </p>
           <Button className="mt-4 w-full" disabled={loadingMode !== null}>
             {loadingMode === 'local' ? 'Setting up...' : 'Use Local Mode'}
