@@ -1,0 +1,121 @@
+name: Release Binaries
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing git tag to upload release assets to
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish-binaries:
+    name: Build and upload ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: mac
+            build_command: pnpm -C apps/desktop exec electron-builder --mac dmg zip --publish never
+          - os: windows-latest
+            target: win
+            build_command: pnpm -C apps/desktop exec electron-builder --win nsis --publish never
+          - os: ubuntu-latest
+            target: linux
+            build_command: pnpm -C apps/desktop exec electron-builder --linux AppImage deb --publish never
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop release artifacts
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          pnpm -C apps/desktop build
+          ${{ matrix.build_command }}
+
+      - name: Collect release assets
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          shopt -s nullglob
+          for pattern in \
+            "apps/desktop/dist/*.dmg" \
+            "apps/desktop/dist/*.zip" \
+            "apps/desktop/dist/*.exe" \
+            "apps/desktop/dist/*.AppImage" \
+            "apps/desktop/dist/*.deb" \
+            "apps/desktop/dist/*.blockmap" \
+            "apps/desktop/dist/latest*.yml" \
+            "apps/desktop/dist/latest*.yaml"
+          do
+            for file in $pattern
+            do
+              cp "$file" release-assets/
+            done
+          done
+          if [ "$(find release-assets -maxdepth 1 -type f | wc -l)" -eq 0 ]; then
+            echo "No release assets were generated"
+            exit 1
+          fi
+
+      - name: Generate checksums
+        shell: bash
+        env:
+          RELEASE_TARGET: ${{ matrix.target }}
+        run: |
+          node <<'NODE'
+          const crypto = require('node:crypto')
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const directory = 'release-assets'
+          const outputFile = `checksums-${process.env.RELEASE_TARGET}.txt`
+          const files = fs
+            .readdirSync(directory)
+            .filter((file) => fs.statSync(path.join(directory, file)).isFile())
+            .sort()
+
+          const lines = files.map((file) => {
+            const payload = fs.readFileSync(path.join(directory, file))
+            const digest = crypto.createHash('sha256').update(payload).digest('hex')
+            return `${digest}  ${file}`
+          })
+
+          fs.writeFileSync(path.join(directory, outputFile), `${lines.join('\n')}\n`)
+          NODE
+
+      - name: Upload assets to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+          files: release-assets/*
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
