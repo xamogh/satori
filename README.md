@@ -118,6 +118,33 @@ $ pnpm build:mac
 $ pnpm build:linux
 ```
 
+## Releases
+
+GitHub releases are now automated with two workflows:
+
+1. `Release Please` (`.github/workflows/release-please.yml`)
+2. `Release Binaries` (`.github/workflows/release-binaries.yml`)
+
+Release behavior:
+
+1. Every push to `main` updates/creates a release PR from Conventional Commits.
+2. Merging that PR updates `CHANGELOG.md`, bumps `apps/desktop/package.json`, creates a tag (`vX.Y.Z`), and publishes a GitHub Release with notes.
+3. When the release is published, a matrix build (macOS/Windows/Linux) attaches installers/packages and per-platform SHA256 checksum files to the same GitHub Release.
+
+Maintainer flow:
+
+1. Merge normal feature/fix commits into `main`.
+2. Merge the generated release PR.
+3. Wait for `Release Binaries` to finish and verify assets in the GitHub Release page.
+
+Optional production signing/notarization secrets (recommended before public distribution):
+
+- `APPLE_ID`
+- `APPLE_APP_SPECIFIC_PASSWORD`
+- `APPLE_TEAM_ID`
+- `CSC_LINK`
+- `CSC_KEY_PASSWORD`
+
 ## Troubleshooting
 
 ### LocalDbOpenError / NODE_MODULE_VERSION mismatch
