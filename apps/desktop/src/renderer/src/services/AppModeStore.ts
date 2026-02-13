@@ -62,10 +62,20 @@ const localOnboard = (payload: LocalAuthCredentials): Promise<IpcResult<AuthStat
     return result
   })
 
+const resetSetup = (): Promise<IpcResult<AuthModeStatus>> =>
+  window.api.authResetSetup().then((result) => {
+    if (result._tag === 'Ok') {
+      setModeState(result.value)
+    }
+
+    return result
+  })
+
 export const AppModeStore = {
   subscribe,
   getSnapshot: modeStore.getSnapshot,
   refresh,
   selectMode,
-  localOnboard
+  localOnboard,
+  resetSetup
 } as const

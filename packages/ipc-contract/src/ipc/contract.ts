@@ -101,6 +101,7 @@ export const IpcChannel = {
   authStatus: 'satori-desktop:auth:status',
   authSignIn: 'satori-desktop:auth:sign-in',
   authSignOut: 'satori-desktop:auth:sign-out',
+  authResetSetup: 'satori-desktop:auth:reset-setup',
   eventsList: 'satori-desktop:events:list',
   eventsCreate: 'satori-desktop:events:create',
   eventsUpdate: 'satori-desktop:events:update',
@@ -295,6 +296,11 @@ export const IpcRoutes = {
     channel: IpcChannel.authSignOut,
     request: Schema.Void,
     response: AuthStateSchema
+  },
+  authResetSetup: {
+    channel: IpcChannel.authResetSetup,
+    request: Schema.Void,
+    response: AuthModeStatusSchema
   },
   eventsList: {
     channel: IpcChannel.eventsList,

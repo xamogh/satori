@@ -100,6 +100,7 @@ const api: IpcApi = {
   authStatus: () => invokeRoute(IpcRoutes.authStatus, undefined),
   authSignIn: (payload) => invokeRoute(IpcRoutes.authSignIn, payload),
   authSignOut: () => invokeRoute(IpcRoutes.authSignOut, undefined),
+  authResetSetup: () => invokeRoute(IpcRoutes.authResetSetup, undefined),
   eventsList: (payload) => invokeRoute(IpcRoutes.eventsList, payload),
   eventsCreate: (payload) => invokeRoute(IpcRoutes.eventsCreate, payload),
   eventsUpdate: (payload) => invokeRoute(IpcRoutes.eventsUpdate, payload),

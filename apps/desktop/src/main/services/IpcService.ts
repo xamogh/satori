@@ -120,6 +120,7 @@ const makeIpcService = Effect.gen(function* () {
       registerHandler(IpcRoutes.authStatus, () => authService.getStatus),
       registerHandler(IpcRoutes.authSignIn, (request) => authService.signIn(request)),
       registerHandler(IpcRoutes.authSignOut, () => authService.signOut),
+      registerHandler(IpcRoutes.authResetSetup, () => authService.resetSetup),
 
       registerHandler(IpcRoutes.ping, () =>
         authService.requireAuthenticated.pipe(

@@ -751,6 +751,21 @@ const makeAuthService = Effect.gen(function* () {
     unauthenticatedState
   )
 
+  const resetSetup: Effect.Effect<AuthModeStatus, never> = Effect.gen(function* () {
+    yield* deleteFileIgnoringErrors(fs, authSessionFilePath())
+    yield* deleteFileIgnoringErrors(fs, authModeFilePath())
+    yield* deleteFileIgnoringErrors(fs, localAccountFilePath())
+    yield* Effect.sync(() => {
+      currentStoredSession = Option.none()
+      currentAuthMode = Option.none()
+      currentLocalAccount = Option.none()
+      currentAuthState = unauthenticatedState
+      clearLockTimeout()
+    })
+
+    return modeStatusFromState()
+  })
+
   return {
     getModeStatus,
     selectMode,
@@ -759,6 +774,7 @@ const makeAuthService = Effect.gen(function* () {
     localOnboard,
     localSignIn,
     signOut,
+    resetSetup,
     requireAuthenticated,
     getAccessToken
   } as const
