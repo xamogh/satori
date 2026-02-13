@@ -66,9 +66,37 @@ const localOnboard = (payload: LocalAuthCredentials): Promise<IpcResult<AuthStat
 const toDefectMessage = (reason: unknown): string =>
   reason instanceof Error ? reason.message : String(reason)
 
+const withTimeout = <A>(
+  promise: Promise<IpcResult<A>>,
+  label: string,
+  timeoutMs: number
+): Promise<IpcResult<A>> => {
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  return Promise.race([
+    promise.then((result) => {
+      if (timer !== null) {
+        clearTimeout(timer)
+      }
+
+      return result
+    }),
+    new Promise<IpcResult<A>>((resolve) => {
+      timer = setTimeout(() => {
+        resolve(
+          makeErr({
+            _tag: 'Defect',
+            message: `${label} did not complete. You may be running an older app build.`
+          })
+        )
+      }, timeoutMs)
+    })
+  ])
+}
+
 const resetSetup = (): Promise<IpcResult<AuthModeStatus>> =>
   Promise.resolve()
-    .then(() => window.api.authResetSetup())
+    .then(() => withTimeout(window.api.authResetSetup(), 'Reset setup', 8000))
     .then((result) => {
       if (result._tag === 'Ok') {
         setModeState(result.value)
