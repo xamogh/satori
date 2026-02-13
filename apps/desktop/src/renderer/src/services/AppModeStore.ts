@@ -6,6 +6,7 @@ import type {
   IpcResult,
   LocalAuthCredentials
 } from '@satori/ipc-contract/ipc/contract'
+import { makeErr } from '@satori/ipc-contract/ipc/contract'
 
 export type AppModeViewState = { readonly _tag: 'Loading' } | AuthModeStatus
 
@@ -62,14 +63,25 @@ const localOnboard = (payload: LocalAuthCredentials): Promise<IpcResult<AuthStat
     return result
   })
 
-const resetSetup = (): Promise<IpcResult<AuthModeStatus>> =>
-  window.api.authResetSetup().then((result) => {
-    if (result._tag === 'Ok') {
-      setModeState(result.value)
-    }
+const toDefectMessage = (reason: unknown): string =>
+  reason instanceof Error ? reason.message : String(reason)
 
-    return result
-  })
+const resetSetup = (): Promise<IpcResult<AuthModeStatus>> =>
+  Promise.resolve()
+    .then(() => window.api.authResetSetup())
+    .then((result) => {
+      if (result._tag === 'Ok') {
+        setModeState(result.value)
+      }
+
+      return result
+    })
+    .catch((reason) =>
+      makeErr({
+        _tag: 'Defect',
+        message: toDefectMessage(reason)
+      })
+    )
 
 export const AppModeStore = {
   subscribe,

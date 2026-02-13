@@ -195,22 +195,21 @@ export const AppContainer = (): React.JSX.Element => {
     setError(null)
     setResettingSetup(true)
 
-    AppModeStore.resetSetup().then(
-      (result) => {
-        setResettingSetup(false)
-
+    void AppModeStore.resetSetup()
+      .then((result) => {
         if (result._tag === 'Err') {
           setError(result.error.message)
           return
         }
 
         void AuthStore.refresh()
-      },
-      (reason) => {
+      })
+      .catch((reason) => {
+        setError(reason instanceof Error ? reason.message : String(reason))
+      })
+      .finally(() => {
         setResettingSetup(false)
-        setError(String(reason))
-      }
-    )
+      })
   }, [])
 
   if (modeState._tag === 'Loading' || authState._tag === 'Loading') {
