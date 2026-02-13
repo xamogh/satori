@@ -46,6 +46,7 @@ export const AppContainer = (): React.JSX.Element => {
 
   const [error, setError] = useState<string | null>(null)
   const [loadingMode, setLoadingMode] = useState<AuthMode | null>(null)
+  const [resettingSetup, setResettingSetup] = useState(false)
 
   const syncSignInForm = useForm({
     defaultValues: signInDefaults,
@@ -182,6 +183,36 @@ export const AppContainer = (): React.JSX.Element => {
     )
   }, [])
 
+  const resetSetup = useCallback((): void => {
+    const confirmed = window.confirm(
+      'Reset setup and return to mode selection? This clears saved login, selected mode, and local account.'
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setError(null)
+    setResettingSetup(true)
+
+    AppModeStore.resetSetup().then(
+      (result) => {
+        setResettingSetup(false)
+
+        if (result._tag === 'Err') {
+          setError(result.error.message)
+          return
+        }
+
+        void AuthStore.refresh()
+      },
+      (reason) => {
+        setResettingSetup(false)
+        setError(String(reason))
+      }
+    )
+  }, [])
+
   if (modeState._tag === 'Loading' || authState._tag === 'Loading') {
     return (
       <div className="flex h-full items-center justify-center">
@@ -222,6 +253,9 @@ export const AppContainer = (): React.JSX.Element => {
           lockedDescription="Session expired. Please sign in again."
           submitLabel="Sign in locally"
           submittingLabel="Signing in..."
+          secondaryActionLabel="Switch mode / Reset setup"
+          secondaryActionLoading={resettingSetup}
+          onSecondaryAction={resetSetup}
         />
       )
     }
@@ -232,6 +266,9 @@ export const AppContainer = (): React.JSX.Element => {
         mode={authState._tag === 'Locked' ? 'locked' : 'unauthenticated'}
         form={syncSignInForm}
         error={error}
+        secondaryActionLabel="Switch mode / Reset setup"
+        secondaryActionLoading={resettingSetup}
+        onSecondaryAction={resetSetup}
       />
     )
   }

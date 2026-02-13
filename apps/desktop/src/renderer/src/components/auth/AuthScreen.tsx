@@ -25,6 +25,10 @@ export type AuthScreenProps = {
   readonly lockedDescription?: string
   readonly submitLabel?: string
   readonly submittingLabel?: string
+  readonly secondaryActionLabel?: string
+  readonly secondaryActionLoadingLabel?: string
+  readonly secondaryActionLoading?: boolean
+  readonly onSecondaryAction?: () => void
 }
 
 export const AuthScreen = ({
@@ -39,7 +43,11 @@ export const AuthScreen = ({
   unauthenticatedDescription = 'Sign in to continue to your account',
   lockedDescription = 'Session expired. Please sign in again.',
   submitLabel = 'Sign in',
-  submittingLabel = 'Signing in...'
+  submittingLabel = 'Signing in...',
+  secondaryActionLabel,
+  secondaryActionLoadingLabel = 'Resetting...',
+  secondaryActionLoading = false,
+  onSecondaryAction
 }: AuthScreenProps): React.JSX.Element => (
   <div className="relative flex min-h-screen items-center justify-center p-6">
     {/* Gradient background */}
@@ -115,9 +123,26 @@ export const AuthScreen = ({
             })}
           >
             {({ canSubmit, isSubmitting }) => (
-              <Button type="submit" disabled={!canSubmit} className="w-full">
-                {isSubmitting ? submittingLabel : submitLabel}
-              </Button>
+              <div className="grid gap-2">
+                <Button
+                  type="submit"
+                  disabled={!canSubmit || secondaryActionLoading}
+                  className="w-full"
+                >
+                  {isSubmitting ? submittingLabel : submitLabel}
+                </Button>
+                {onSecondaryAction && secondaryActionLabel ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isSubmitting || secondaryActionLoading}
+                    className="w-full"
+                    onClick={onSecondaryAction}
+                  >
+                    {secondaryActionLoading ? secondaryActionLoadingLabel : secondaryActionLabel}
+                  </Button>
+                ) : null}
+              </div>
             )}
           </form.Subscribe>
         </form>
