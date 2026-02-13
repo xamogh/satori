@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/xamogh/satori/compare/1.1.1...v1.2.0) (2026-02-13)
+
+
+### Features
+
+* **auth:** add reset-setup action on login screen ([870c817](https://github.com/xamogh/satori/commit/870c81769ec380b9f780989391c702e6720ee9fc))
+* **auth:** add reset-setup IPC flow ([071755b](https://github.com/xamogh/satori/commit/071755b07514d787cef77b259bbf3b62fe00bbc9))
+
+
+### Bug Fixes
+
+* **auth:** prevent reset-setup UI from hanging ([6942a45](https://github.com/xamogh/satori/commit/6942a45a498b4182dea45d31325b99f72f30d4e9))
+* **desktop:** timeout reset setup IPC flow ([d87e06f](https://github.com/xamogh/satori/commit/d87e06f452f0d8eacf68755abb098235bd5151cb))
+
 ## [1.1.1](https://github.com/xamogh/satori/compare/1.1.0...v1.1.1) (2026-02-12)
 
 
